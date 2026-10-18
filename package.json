@@ -36,7 +36,7 @@
     "appId": "com.sharkcalendar.app",
     "productName": "鲨鱼日程",
     "directories": {
-      "output": "release-v6",
+      "output": "release-v8",
       "buildResources": "resources"
     },
     "files": [
