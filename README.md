@@ -1,6 +1,6 @@
-# 日程
+# 🦈 鲨鱼日程
 
-一个常驻托盘的 Windows 桌面日程软件。月 / 周 / 日三种视图，一个贴在桌面上的悬浮小窗，数据全部存在本机。
+一个常驻托盘的 Windows 桌面日程软件。月 / 周 / 日三种视图，一个贴在桌面上的悬浮小窗，支持 ICS 订阅导入 Google / Outlook 日历，以及多设备云同步。
 
 ![月视图](screenshots/month.png)
 
@@ -43,7 +43,7 @@
 - 支持粘贴 ICS 链接（`https://.../basic.ics` 或 `webcal://...`），把 Google 日历、Outlook、Apple 日历同步进来
 - 解析 VEVENT 全字段，支持 `RRULE` 重复规则展开（DAILY / WEEKLY / MONTHLY / YEARLY、BYDAY、INTERVAL、COUNT、UNTIL）与 `EXDATE` 排除
 - 正确处理折行、转义字符、`VALARM` 嵌套、`TZID` 时区
-- 订阅事件**只读**：不能直接编辑删除，但可以「忽略此次」（跳过重复会议里的某一场）或「复制为我的日程」
+- 订阅事件**只读**：不能直接编辑删除，但可以「忽略此次」（跳过重复会议里的某一场）或「复制为我的事件」
 - 启动后自动同步一次，之后每 6 小时刷新；也可以手动刷新。同步失败会保留上一次的数据，不会把日历变空
 
 **托盘常驻**
@@ -70,14 +70,31 @@ npm start          # 用构建产物启动
 npm run dist       # 打包成 Windows 安装包 → release/
 ```
 
-`npm run dist` 会生成 `release/日程 Setup x.x.x.exe`（NSIS 安装包，可自选安装目录）。
+`npm run dist` 会生成 `release/鲨鱼日程 Setup x.x.x.exe`（NSIS 安装包，可自选安装目录）。
+
+## 更换应用图标
+
+图标就是普通图片，不需要设计软件。把新图（PNG / JPG，方形，建议 ≥ 256x256）准备好，然后：
+
+```bash
+node scripts/update-icon.mjs <你的图片路径>
+npm run dist
+```
+
+脚本会自动完成格式转换（electron-builder 只认 PNG）、生成 1024×1024 主图标和 32×32 托盘小图标，之后重新打包就生效。
+
+相关文件：
+- `resources/icon.png` —— 主图标
+- `resources/tray.png` —— 托盘小图标
+- `resources/icon-source.*` —— 你放进去的原始图片（留档，方便回滚）
+- `scripts/gen-icon.mjs` —— 程序化生成图标的备用方案
 
 ## 快捷键
 
 | 快捷键 | 作用 |
 | --- | --- |
 | `Ctrl + K` | 快速添加（自然语言） |
-| `N` | 新建日程 |
+| `N` | 新建事件 |
 | `T` | 回到今天 |
 | `1` / `2` / `3` | 切换 月 / 周 / 日 视图 |
 | `←` / `→` | 上一页 / 下一页 |
@@ -96,9 +113,9 @@ npm run dist       # 打包成 Windows 安装包 → release/
 
 写入采用「临时文件 + rename」的原子写，程序崩溃不会产生半截文件。如果文件被外部破坏，启动时会自动备份为 `daily-list.json.corrupt-<时间戳>.bak` 并重置，不会白屏。
 
-数据结构按**多设备同步**预留了字段：每条事件带 `id` / `rev` / `updatedAt` / `deleted`（软删除墓碑），顶层带 `schemaVersion`。将来接云同步时不需要做数据迁移。
+数据结构按**多设备同步**预留了字段：每条事件带 `id` / `rev` / `updatedAt` / `deleted`（软删除墓碑），顶层带 `schemaVersion`。
 
-> 云同步目前**没有实现**。账号体系、冲突合并、离线队列是独立的一期工程，强行塞进 MVP 会拖垮稳定性，所以这一版先只做本地。
+云同步已实现，配置方法见下方「云同步」一节；不想用云同步就当纯本地软件使用，功能不受影响。
 
 ## 项目结构
 
@@ -118,6 +135,7 @@ src/
         └── components/      # MonthView / TimeGrid / EventEditor / ...
 scripts/
 ├── gen-icon.mjs       # 纯 Node 生成应用图标（无第三方依赖）
+├── update-icon.mjs    # 一键更换应用图标（自动处理格式与尺寸）
 ├── smoke.mjs          # 冒烟测试：启动应用 + CDP 截图
 └── probe.mjs          # 在运行中的渲染进程里执行 JS 做断言
 ```
@@ -137,5 +155,5 @@ node scripts/probe.mjs "document.querySelectorAll('.month-cell').length"   # 应
 - 暂不支持拖拽调整事件时间
 - 订阅只读：不能在自己软件里改外部日历的事件，改动请回原日历操作
 - 订阅展开范围限定在「过去 60 天 ~ 未来 365 天」，单源上限 3000 条实例
-- 云同步未实现（字段已预留）
+- 云同步已就绪，但同步用的服务端需要自行部署（CloudBase 云函数模板已放在 `cloudbase/`，见部署指南）；不想用云同步不影响任何本地功能
 - 仅针对 Windows 打包配置；Electron 本身跨平台，macOS / Linux 需自行补打包配置

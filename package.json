@@ -1,9 +1,9 @@
 {
-  "name": "shark-calendar",
+  "name": "daily-list",
   "version": "0.3.0",
   "description": "鲨鱼日程 —— 月/周/日视图、托盘常驻、桌面悬浮窗",
   "main": "./out/main/index.js",
-  "author": "shark-calendar",
+  "author": "daily-list",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -36,7 +36,7 @@
     "appId": "com.sharkcalendar.app",
     "productName": "鲨鱼日程",
     "directories": {
-      "output": "release-v5",
+      "output": "release-v6",
       "buildResources": "resources"
     },
     "files": [
