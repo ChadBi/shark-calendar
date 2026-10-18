@@ -63,14 +63,14 @@
 ## 快速开始
 
 ```bash
-npm install
+npm ci             # 按锁文件安装依赖
 npm run dev        # 开发模式（热更新）
 npm run build      # 构建
 npm start          # 用构建产物启动
-npm run dist       # 打包成 Windows 安装包 → release/
+npm run dist       # 打包成 Windows 安装包 → release-v8/
 ```
 
-`npm run dist` 会生成 `release/鲨鱼日程 Setup x.x.x.exe`（NSIS 安装包，可自选安装目录）。
+`npm run dist` 会生成 `release-v8/鲨鱼日程 Setup x.x.x.exe`（NSIS 安装包，可自选安装目录）。输出目录由 `package.json` 的 `build.directories.output` 配置。
 
 ## 更换应用图标
 
@@ -80,6 +80,8 @@ npm run dist       # 打包成 Windows 安装包 → release/
 node scripts/update-icon.mjs <你的图片路径>
 npm run dist
 ```
+
+转换图片和生成托盘图标需要安装 Python 与 Pillow（`python -m pip install Pillow`）。脚本会从 PATH 查找解释器，也可以通过 `PYTHON` 环境变量指定 Python 可执行文件路径。
 
 脚本会自动完成格式转换（electron-builder 只认 PNG）、生成 1024×1024 主图标和 32×32 托盘小图标，之后重新打包就生效。
 
@@ -105,7 +107,7 @@ npm run dist
 
 ## 数据
 
-所有数据保存在本机，不上传任何服务器：
+日程数据保存在本机：
 
 ```
 %APPDATA%\daily-list\daily-list.json
@@ -115,7 +117,9 @@ npm run dist
 
 数据结构按**多设备同步**预留了字段：每条事件带 `id` / `rev` / `updatedAt` / `deleted`（软删除墓碑），顶层带 `schemaVersion`。
 
-云同步已实现，配置方法见下方「云同步」一节；不想用云同步就当纯本地软件使用，功能不受影响。
+云同步默认关闭；启用后，本地创建的日程会上传到你配置的同步服务器。订阅日历会从你配置的 ICS 地址下载，订阅事件不参与云同步。部署与配置方法见[云同步部署指南](docs/cloud-sync-setup.md)。
+
+访问令牌单独保存在同一数据目录下的 `sync-token.bin`，Windows 支持系统加密时使用 DPAPI；不要公开这个文件或含私人日程、订阅链接的数据文件。
 
 ## 项目结构
 
@@ -147,6 +151,16 @@ npm run typecheck    # 类型检查
 node scripts/smoke.mjs   # 启动真实应用，截图到 smoke/
 node scripts/probe.mjs "document.querySelectorAll('.month-cell').length"   # 应为 42
 ```
+
+打包后的启动检查使用 `node scripts/qa-packaged.mjs`，先运行 `npm run dist:dir`。同步服务联调使用 `node scripts/verify-packed.mjs <同步服务地址>`，地址不带末尾 `/sync`，必须自行传入。
+
+## 源码与发布
+
+仓库保留源码、锁文件、图标和演示截图。依赖、构建与打包目录、测试运行数据、AI 工作记录、开发交付报告和本地凭据已加入 `.gitignore`。Windows 安装包通过 GitHub Releases 单独发布。
+
+应用内部标识 `package.json` 的 `name` 保持为 `daily-list`，以沿用现有用户数据目录；显示名称由 `build.productName` 配置。
+
+项目采用 [MIT 许可证](LICENSE)。
 
 ## 已知限制
 

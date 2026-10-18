@@ -1,22 +1,37 @@
 /**
- * 打包版联调验证：启动 release-v3 的安装包，用真实后端地址同步一次。
+ * 打包版联调验证：按 package.json 的输出配置启动应用，检查指定同步服务。
  *
  * 用一个无效令牌去试——如果返回「令牌无效」，说明网络、地址、云函数全通了，
  * 只是令牌不对；如果返回超时或 404，说明地址或路径还有问题。
  *
- * 用法：node scripts/verify-packed.mjs
+ * 用法：node scripts/verify-packed.mjs <同步服务地址（不带 /sync）>
  */
 import { spawn } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 const ROOT = process.cwd()
-const EXE = join(ROOT, 'release-v3', 'win-unpacked', '日程.exe')
+const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8'))
+const EXE = join(ROOT, pkg.build.directories.output, 'win-unpacked', `${pkg.build.productName}.exe`)
 const USERDATA = join(ROOT, 'smoke', `verify-${Date.now()}`)
 const PORT = 9410
 
-// 换成你要验证的地址
-const ENDPOINT = process.argv[2] || 'https://daily-list-d1gs9b0xa87ba7f30-1309664590.ap-shanghai.app.tcloudbase.com'
+const ENDPOINT = process.argv[2]
+if (!ENDPOINT) {
+  console.error('用法：node scripts/verify-packed.mjs <同步服务地址（不带 /sync）>')
+  process.exit(1)
+}
+try {
+  const url = new URL(ENDPOINT)
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error()
+} catch {
+  console.error('同步服务地址必须是有效的 HTTP 或 HTTPS 地址，且不能包含用户名或密码。')
+  process.exit(1)
+}
+if (!existsSync(EXE)) {
+  console.error('未找到打包应用，请先运行 npm run dist:dir。')
+  process.exit(1)
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 mkdirSync(USERDATA, { recursive: true })
@@ -34,7 +49,7 @@ const child = spawn(
     `--remote-debugging-port=${PORT}`,
     `--user-data-dir=${USERDATA}`
   ],
-  { cwd: join(ROOT, 'release-v3', 'win-unpacked'), env, stdio: ['ignore', 'pipe', 'pipe'] }
+  { cwd: dirname(EXE), env, stdio: ['ignore', 'pipe', 'pipe'] }
 )
 
 try {

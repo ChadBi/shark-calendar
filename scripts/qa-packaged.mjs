@@ -1,13 +1,18 @@
 /**
- * QA：打包产物（release/win-unpacked/日程.exe）启动验证。
+ * QA：按 package.json 的输出配置启动打包应用并验证。
  * 用法：node scripts/qa-packaged.mjs
  */
 import { spawn } from 'node:child_process'
-import { join } from 'node:path'
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 const ROOT = process.cwd()
-const EXE = join(ROOT, 'release', 'win-unpacked', '日程.exe')
+const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8'))
+const EXE = join(ROOT, pkg.build.directories.output, 'win-unpacked', `${pkg.build.productName}.exe`)
+if (!existsSync(EXE)) {
+  console.error('未找到打包应用，请先运行 npm run dist:dir。')
+  process.exit(1)
+}
 const PORT = 9411
 const USERDATA = join(ROOT, 'smoke', `qa-pkg-${Date.now()}`)
 mkdirSync(USERDATA, { recursive: true })
@@ -18,7 +23,7 @@ env.DAILY_LIST_DISABLE_GPU = '1'
 
 const logs = []
 const child = spawn(EXE, [`--remote-debugging-port=${PORT}`, '--no-sandbox', '--disable-gpu', '--disable-gpu-compositing', `--user-data-dir=${USERDATA}`], {
-  cwd: join(ROOT, 'release', 'win-unpacked'),
+  cwd: dirname(EXE),
   env,
   stdio: ['ignore', 'pipe', 'pipe']
 })

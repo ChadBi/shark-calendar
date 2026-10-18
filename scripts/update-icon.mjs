@@ -18,13 +18,13 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-/* 从项目根目录找可用的 Python（优先用之前装过 Pillow 的那个） */
+/* 可通过 PYTHON 指定解释器，否则从 PATH 查找安装了 Pillow 的 Python。 */
 const PY_CANDIDATES = [
-  'C:/Users/19786/.workbuddy-ai/binaries/python/versions/3.13.12/python.exe',
+  process.env.PYTHON,
   'python',
   'python3',
   'py'
-]
+].filter(Boolean)
 
 function findPython() {
   for (const py of PY_CANDIDATES) {

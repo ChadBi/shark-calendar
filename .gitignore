@@ -7,5 +7,19 @@ smoke/
 *.log
 .DS_Store
 
+# 本机 AI 工作记录和开发交付报告
+/.workbuddy-ai/
+/deliverables/gstack/
+
+# 本地配置、凭据和个人日程数据
+.env
+.env.*
+!.env.example
+sync-token.bin
+daily-list.json
+daily-list.json.*
+*.pem
+*.key
+
 # Windows 保留设备名误建的文件
 /nul
