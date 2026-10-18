@@ -14,6 +14,8 @@ import { existsSync } from 'fs'
 import { Store } from './store'
 import { syncAll, syncSource } from './sync'
 import { normalizeIcsUrl } from './ics'
+import { getStatus as getSyncStatus, syncOnce } from './cloud-sync'
+import { saveSyncToken } from './credentials'
 import type { CalendarEvent, CalendarSource, EventColor, Settings, WidgetBounds } from '../shared/types'
 
 const isDev = !app.isPackaged
@@ -308,6 +310,22 @@ function broadcast(): void {
   buildTrayMenu()
 }
 
+/* ------------------------------------------------------------ 云同步调度 */
+
+let syncTimer: NodeJS.Timeout | null = null
+
+/** 本地改动后延迟推送：连续编辑时只发一次请求 */
+function scheduleSync(delay = 2500): void {
+  if (!store.settings.syncEnabled || !store.settings.syncEndpoint) return
+  if (syncTimer) clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    void syncOnce(store).then((r) => {
+      if (r.ok && (r.applied > 0 || r.pulled > 0)) broadcast()
+    })
+  }, delay)
+  syncTimer.unref?.()
+}
+
 /* ------------------------------------------------------------------- IPC */
 
 function registerIpc(): void {
@@ -316,12 +334,14 @@ function registerIpc(): void {
   ipcMain.handle('events:upsert', (_e, input: Partial<CalendarEvent> & { title: string; start: string; end: string }) => {
     const ev = store.upsertEvent(input)
     broadcast()
+    scheduleSync()
     return ev
   })
 
   ipcMain.handle('events:delete', (_e, id: string) => {
     store.deleteEvent(id)
     broadcast()
+    scheduleSync()
   })
 
   ipcMain.handle('events:import', (_e, events: CalendarEvent[]) => {
@@ -424,6 +444,21 @@ function registerIpc(): void {
     broadcast()
   })
 
+  /* ------------------------------------------------------------ 云同步 */
+
+  ipcMain.handle('sync:status', () => getSyncStatus(store))
+
+  ipcMain.handle('sync:now', async () => {
+    const outcome = await syncOnce(store)
+    broadcast()
+    return outcome
+  })
+
+  ipcMain.handle('sync:setToken', (_e, token: string) => {
+    saveSyncToken(token)
+    broadcast()
+  })
+
   // 从悬浮窗点某条日程 → 打开主窗口并弹出该日程的编辑框
   ipcMain.handle('app:openEvent', (_e, id: string) => {
     showMain()
@@ -466,6 +501,16 @@ if (!gotLock) {
     }
     setTimeout(runSync, 5000).unref()
     setInterval(runSync, 6 * 60 * 60 * 1000).unref()
+
+    // 云同步：启动后延迟几秒推一次，之后每 5 分钟轮询
+    const runCloudSync = (): void => {
+      if (!store.settings.syncEnabled || !store.settings.syncEndpoint) return
+      void syncOnce(store).then((r) => {
+        if (r.ok && (r.applied > 0 || r.pulled > 0)) broadcast()
+      })
+    }
+    setTimeout(runCloudSync, 4000).unref()
+    setInterval(runCloudSync, 5 * 60 * 1000).unref()
 
     if (store.settings.launchAtLogin) app.setLoginItemSettings({ openAtLogin: true })
     if (store.settings.showWidgetOnStart) showWidget()

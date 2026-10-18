@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useApp } from '../store'
 import { Icon } from './Icon'
 import { SubscriptionPanel } from './SubscriptionPanel'
+import { SyncPanel } from './SyncPanel'
 
 function Row({
   label,
@@ -145,7 +146,9 @@ export function SettingsPanel(): React.ReactElement {
 
           <SubscriptionPanel />
 
-          <Row label="数据" desc="所有数据保存在本机，不上传">
+          <SyncPanel />
+
+          <Row label="数据" desc="默认只存在本机；开启云同步后会发送到你自己的同步服务">
             <button className="btn" onClick={() => window.api.openDataFolder()}>
               打开数据文件夹
             </button>

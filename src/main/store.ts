@@ -7,7 +7,13 @@ import { DEFAULT_SETTINGS, SCHEMA_VERSION } from '../shared/defaults'
 export { DEFAULT_SETTINGS, SCHEMA_VERSION }
 
 function emptyData(): AppData {
-  return { schemaVersion: SCHEMA_VERSION, events: [], sources: [], settings: { ...DEFAULT_SETTINGS } }
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    deviceId: crypto.randomUUID(),
+    events: [],
+    sources: [],
+    settings: { ...DEFAULT_SETTINGS }
+  }
 }
 
 /**
@@ -55,6 +61,7 @@ export class Store {
         // 数据来自更新版本时不要把版本号降下来，否则未来 v3 的数据
         // 被旧版程序打开会被误标成 v2，回滚时又触发一次迁移
         schemaVersion: version > SCHEMA_VERSION ? version : SCHEMA_VERSION,
+        deviceId: parsed.deviceId ?? crypto.randomUUID(),
         events: Array.isArray(parsed.events) ? parsed.events : [],
         sources: Array.isArray(parsed.sources) ? parsed.sources : [],
         settings
@@ -107,7 +114,9 @@ export class Store {
         color: input.color ?? existing.color,
         notes: input.notes ?? existing.notes,
         updatedAt: now,
-        rev: existing.rev + 1
+        rev: existing.rev + 1,
+        // 标记为待推送；订阅事件不参与云同步，永远不置 dirty
+        dirty: existing.sourceId ? false : true
       })
       this.save()
       return existing
@@ -123,7 +132,8 @@ export class Store {
       createdAt: now,
       updatedAt: now,
       rev: 1,
-      deleted: false
+      deleted: false,
+      dirty: true
     }
     this.data.events.push(created)
     this.save()
@@ -137,6 +147,7 @@ export class Store {
     target.deleted = true
     target.updatedAt = new Date().toISOString()
     target.rev += 1
+    target.dirty = !target.sourceId
     this.save()
   }
 
@@ -213,6 +224,7 @@ export class Store {
   snapshot(): AppData {
     return {
       schemaVersion: this.data.schemaVersion,
+      deviceId: this.data.deviceId,
       events: this.data.events.filter((e) => !e.deleted),
       sources: this.data.sources,
       settings: this.data.settings

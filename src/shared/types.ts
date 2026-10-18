@@ -25,6 +25,10 @@ export interface CalendarEvent {
   /** 订阅事件只读，不能直接编辑或删除 */
   readOnly?: boolean
   location?: string
+  /** 服务端分配的单调递增序号，用于增量拉取；undefined 表示尚未同步 */
+  serverSeq?: number
+  /** 本地有未推送的修改 */
+  dirty?: boolean
 }
 
 /** 一个 ICS 订阅源 */
@@ -65,11 +69,22 @@ export interface Settings {
   showWidgetOnStart: boolean
   /** 24 小时制 */
   hour24: boolean
+
+  /* ---------------- 云同步 ---------------- */
+  syncEnabled: boolean
+  /** 同步服务地址，例如云函数的 HTTP 触发地址 */
+  syncEndpoint: string
+  /** 已拉取到的最大序号，增量游标 */
+  syncLastSeq: number
+  /** 上次成功同步时间 ISO */
+  syncLastAt?: string
 }
 
 export interface AppData {
   /** 数据结构版本，供未来迁移/同步使用 */
   schemaVersion: number
+  /** 本机标识，同步时用于区分来源设备 */
+  deviceId: string
   events: CalendarEvent[]
   sources: CalendarSource[]
   settings: Settings
@@ -87,6 +102,44 @@ export interface SyncResult {
   /** 命中单源实例上限，结果被截断 */
   truncated: boolean
   error?: string
+}
+
+/* ------------------------------------------------------------ 云同步 */
+
+/** 与服务端交换的单条记录 */
+export interface SyncWireRecord {
+  id: string
+  payload: CalendarEvent
+  /** 毫秒时间戳，冲突时按它取新 */
+  updatedAt: number
+  deleted: boolean
+  /** 服务端分配，客户端只读 */
+  seq?: number
+}
+
+export interface SyncPullResponse {
+  serverSeq: number
+  records: SyncWireRecord[]
+}
+
+export interface SyncOutcome {
+  ok: boolean
+  pushed: number
+  pulled: number
+  applied: number
+  conflicts: number
+  error?: string
+  at?: string
+}
+
+export interface SyncStatus {
+  enabled: boolean
+  hasToken: boolean
+  endpoint: string
+  lastSeq: number
+  lastAt?: string
+  /** 本地待推送条数 */
+  pending: number
 }
 
 export interface AppApi {
@@ -112,6 +165,11 @@ export interface AppApi {
   removeSource(id: string): Promise<void>
   syncSources(id?: string): Promise<SyncResult[]>
   hideInstance(sourceId: string, key: string): Promise<void>
+
+  /* 云同步 */
+  syncNow(): Promise<SyncOutcome>
+  getSyncStatus(): Promise<SyncStatus>
+  setSyncToken(token: string): Promise<void>
 
   onDataChanged(cb: (data: AppData) => void): () => void
   onQuickAdd(cb: () => void): () => void

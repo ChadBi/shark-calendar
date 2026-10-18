@@ -1,0 +1,9 @@
+{
+  "name": "daily-list-sync",
+  "version": "1.0.0",
+  "description": "日程同步云函数",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.9.0"
+  }
+}

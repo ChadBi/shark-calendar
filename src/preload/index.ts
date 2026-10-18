@@ -22,6 +22,10 @@ const api: AppApi = {
   hideInstance: (sourceId: string, key: string) =>
     ipcRenderer.invoke('sources:hideInstance', sourceId, key),
 
+  syncNow: () => ipcRenderer.invoke('sync:now'),
+  getSyncStatus: () => ipcRenderer.invoke('sync:status'),
+  setSyncToken: (token: string) => ipcRenderer.invoke('sync:setToken', token),
+
   onDataChanged: (cb: (data: AppData) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, data: AppData): void => cb(data)
     ipcRenderer.on('data:changed', listener)

@@ -12,7 +12,13 @@ export const DEFAULT_SETTINGS: Settings = {
   widgetAlwaysOnTop: false,
   widgetBounds: null,
   showWidgetOnStart: false,
-  hour24: true
+  hour24: true,
+
+  // 云同步默认关闭：没配置服务地址时开着只会不断报错
+  syncEnabled: false,
+  syncEndpoint: '',
+  syncLastSeq: 0,
+  syncLastAt: undefined
 }
 
 /**
