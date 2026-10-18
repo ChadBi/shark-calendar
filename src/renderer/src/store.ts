@@ -138,7 +138,7 @@ export const useApp = create<State>()((set, get) => ({
   saveEvent: async (draft) => {
     await window.api.upsertEvent({
       id: draft.id,
-      title: draft.title.trim() || '未命名日程',
+      title: draft.title.trim() || '未命名事件',
       start: draft.start.toISOString(),
       end: draft.end.toISOString(),
       allDay: draft.allDay,
@@ -176,7 +176,7 @@ export const useApp = create<State>()((set, get) => ({
     try {
       const { result } = await window.api.addSource({ name, url })
       get().showToast(
-        result.ok ? `已添加订阅，导入 ${result.added} 条日程` : `订阅失败：${result.error ?? '未知错误'}`
+        result.ok ? `已添加订阅，导入 ${result.added} 条事件` : `订阅失败：${result.error ?? '未知错误'}`
       )
       return result
     } catch (err) {
@@ -189,7 +189,7 @@ export const useApp = create<State>()((set, get) => ({
 
   removeSource: async (id) => {
     await window.api.removeSource(id)
-    get().showToast('已移除订阅，其日程一并删除')
+    get().showToast('已移除订阅，其事件一并删除')
   },
 
   syncSources: async (id) => {
@@ -201,7 +201,7 @@ export const useApp = create<State>()((set, get) => ({
         get().showToast(`${failed.length} 个订阅同步失败：${failed[0].error ?? ''}`)
       } else if (results.length > 0) {
         const total = results.reduce((n, r) => n + r.added, 0)
-        get().showToast(`同步完成，共 ${total} 条日程`)
+        get().showToast(`同步完成，共 ${total} 条事件`)
       }
       return results
     } finally {

@@ -61,7 +61,7 @@ export function SettingsPanel(): React.ReactElement {
             窗口行为
           </div>
 
-          <Row label="关闭窗口时隐藏到托盘" desc="应用继续在后台运行，日程提醒不受影响">
+          <Row label="关闭窗口时隐藏到托盘" desc="应用继续在后台运行，事件提醒不受影响">
             <Switch on={settings.closeToTray} onClick={() => patch({ closeToTray: !settings.closeToTray })} />
           </Row>
 

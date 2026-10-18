@@ -55,7 +55,7 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
   const commit = (): void => {
     onSave({
       id: draft.id,
-      title: title.trim() || '未命名日程',
+      title: title.trim() || '未命名事件',
       start,
       end,
       allDay,
@@ -64,7 +64,7 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
     })
   }
 
-  /** 订阅事件不能改，但可以复制一份成自己的日程 */
+  /** 订阅事件不能改，但可以复制一份成自己的事件 */
   const duplicateAsLocal = (): void => {
     onSave({
       title: `${title}（副本）`,
@@ -104,7 +104,7 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
     >
       <div className="modal" onKeyDown={onKeyDown}>
         <div className="modal-head">
-          <h2>{readOnly ? '查看日程' : draft.id ? '编辑日程' : '新建日程'}</h2>
+          <h2>{readOnly ? '查看事件' : draft.id ? '编辑事件' : '新建事件'}</h2>
           <button className="icon-btn plain" onClick={onClose} title="关闭">
             <Icon name="x" size={15} />
           </button>
@@ -225,9 +225,9 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
                 忽略此次
               </button>
               <span className="spacer" />
-              <button className="btn" onClick={duplicateAsLocal} title="复制成一条属于你自己的日程">
+              <button className="btn" onClick={duplicateAsLocal} title="复制成一条属于你自己的事件">
                 <Icon name="plus" size={13} />
-                复制为我的日程
+                复制为我的事件
               </button>
               <button className="btn primary" onClick={onClose}>
                 关闭

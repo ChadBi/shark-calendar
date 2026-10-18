@@ -187,7 +187,7 @@ export function parseIcs(text: string): IcsEvent[] {
       if (cur?.start && cur?.end) {
         events.push({
           uid: cur.uid ?? `no-uid-${cur.start.toISOString()}`,
-          summary: cur.summary ?? '未命名日程',
+          summary: cur.summary ?? '未命名事件',
           description: cur.description,
           location: cur.location,
           start: cur.start,

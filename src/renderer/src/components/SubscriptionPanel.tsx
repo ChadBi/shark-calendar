@@ -43,7 +43,7 @@ export function SubscriptionPanel(): React.ReactElement {
         <div className="source-form">
           <input
             className="input"
-            placeholder="名称（可选，如：工作日程）"
+            placeholder="名称（可选，如：工作订阅）"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -60,7 +60,7 @@ export function SubscriptionPanel(): React.ReactElement {
             <span className="setting-desc" style={{ flex: 1, lineHeight: 1.5 }}>
               Google 日历：设置 → 日历 → 共享 → 复制「秘密地址（iCal 格式）」。
               <br />
-              该链接等同密码，拿到的人都能读到你的日程，请勿公开分享。
+              该链接等同密码，拿到的人都能读到你的事件，请勿公开分享。
             </span>
             <button className="btn" onClick={() => setAdding(false)}>
               取消
@@ -74,7 +74,7 @@ export function SubscriptionPanel(): React.ReactElement {
 
       {sources.length === 0 && !adding && (
         <div className="setting-desc" style={{ padding: '2px 0 6px', lineHeight: 1.7 }}>
-          还没有订阅。添加一个 ICS 链接，就能把 Google 日历、Outlook 等外部日程同步进来（只读）。
+          还没有订阅。添加一个 ICS 链接，就能把 Google 日历、Outlook 等外部事件同步进来（只读）。
         </div>
       )}
 
@@ -108,7 +108,7 @@ export function SubscriptionPanel(): React.ReactElement {
           </button>
           <button
             className="icon-btn plain"
-            title="移除订阅（连同其日程一起删除）"
+            title="移除订阅（连同其事件一起删除）"
             onClick={() => void removeSource(src.id)}
           >
             <Icon name="trash" size={13} />

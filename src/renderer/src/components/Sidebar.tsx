@@ -115,8 +115,8 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div className="brand-mark">日</div>
-        <span className="brand-name">日程</span>
+        <div className="brand-mark">鲨</div>
+        <span className="brand-name">鲨鱼日程</span>
       </div>
 
       <div className="sidebar-scroll">
@@ -169,7 +169,7 @@ export function Sidebar({
         <button className="icon-btn plain" onClick={onOpenSettings} title="设置">
           <Icon name="settings" size={15} />
         </button>
-        <button className="icon-btn plain" onClick={onNew} title="新建日程">
+        <button className="icon-btn plain" onClick={onNew} title="新建事件">
           <Icon name="plus" size={16} strokeWidth={2.1} />
         </button>
       </div>

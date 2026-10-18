@@ -113,7 +113,7 @@ function createMainWindow(): BrowserWindow {
     minWidth: 940,
     minHeight: 600,
     show: false,
-    title: '日程',
+    title: '鲨鱼日程',
     backgroundColor: '#f6f7f9',
     autoHideMenuBar: true,
     icon: appIcon(),
@@ -250,7 +250,7 @@ function buildTrayMenu(): void {
   const widgetVisible = !!widgetWindow && !widgetWindow.isDestroyed() && widgetWindow.isVisible()
 
   const menu = Menu.buildFromTemplate([
-    { label: '打开日程', click: () => showMain() },
+    { label: '打开鲨鱼日程', click: () => showMain() },
     { type: 'separator' },
     {
       label: widgetVisible ? '隐藏桌面悬浮窗' : '显示桌面悬浮窗',
@@ -258,7 +258,7 @@ function buildTrayMenu(): void {
       click: () => toggleWidget()
     },
     {
-      label: '新建日程',
+      label: '新建事件',
       accelerator: 'CommandOrControl+Alt+N',
       click: () => quickAdd()
     },
@@ -278,7 +278,7 @@ function buildTrayMenu(): void {
     { label: '退出', click: () => quitApp() }
   ])
   tray.setContextMenu(menu)
-  tray.setToolTip('日程')
+  tray.setToolTip('鲨鱼日程')
 }
 
 function createTray(): void {
@@ -459,7 +459,7 @@ function registerIpc(): void {
     broadcast()
   })
 
-  // 从悬浮窗点某条日程 → 打开主窗口并弹出该日程的编辑框
+  // 从悬浮窗点某条事件 → 打开主窗口并弹出该事件的编辑框
   ipcMain.handle('app:openEvent', (_e, id: string) => {
     showMain()
     if (!mainWindow) return

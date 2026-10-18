@@ -6,3 +6,6 @@ release-v*/
 smoke/
 *.log
 .DS_Store
+
+# Windows 保留设备名误建的文件
+/nul

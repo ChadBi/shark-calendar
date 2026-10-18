@@ -165,7 +165,7 @@ export default function App(): React.ReactElement {
             快速添加
           </button>
 
-          <button className="btn primary" onClick={() => openNew()} title="新建日程 (N)">
+          <button className="btn primary" onClick={() => openNew()} title="新建事件 (N)">
             <Icon name="plus" size={14} strokeWidth={2.4} />
             新建
           </button>

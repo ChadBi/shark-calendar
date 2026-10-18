@@ -45,7 +45,7 @@ export default function Widget(): React.ReactElement {
       }}
     >
       <div className="wg-head">
-        <div className="wg-date" onDoubleClick={openMain} title="双击打开日程">
+        <div className="wg-date" onDoubleClick={openMain} title="双击打开鲨鱼日程">
           <span className="wg-day">{fmtDayLabel(new Date())}</span>
           <span className="wg-count">
             {todays.length === 0
@@ -67,7 +67,7 @@ export default function Widget(): React.ReactElement {
           <button className="wg-btn" onClick={() => setCollapsed((v) => !v)} title={collapsed ? '展开' : '收起'}>
             <Icon name={collapsed ? 'chevronLeft' : 'chevronRight'} size={13} />
           </button>
-          <button className="wg-btn" onClick={openMain} title="打开日程">
+          <button className="wg-btn" onClick={openMain} title="打开鲨鱼日程">
             <Icon name="calendar" size={13} />
           </button>
           <button className="wg-btn" onClick={hide} title="隐藏悬浮窗">
@@ -113,7 +113,7 @@ export default function Widget(): React.ReactElement {
           <div className="wg-foot">
             <span className="wg-hint">拖动标题栏可移动 · 双击打开</span>
             <button className="wg-open" onClick={openMain}>
-              打开日程
+              打开鲨鱼日程
             </button>
           </div>
         </>

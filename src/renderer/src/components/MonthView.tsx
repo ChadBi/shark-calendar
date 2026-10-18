@@ -109,7 +109,7 @@ export function MonthView({
                 <span className="day-num">{day.getDate()}</span>
                 <button
                   className="cell-add"
-                  title="在这天新建日程"
+                  title="在这天新建事件"
                   onClick={(e) => {
                     e.stopPropagation()
                     onNew(defaultStart(day))

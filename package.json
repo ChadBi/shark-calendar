@@ -1,9 +1,9 @@
 {
-  "name": "daily-list",
-  "version": "0.2.0",
-  "description": "桌面日程 —— 月/周/日视图、托盘常驻、桌面悬浮窗",
+  "name": "shark-calendar",
+  "version": "0.3.0",
+  "description": "鲨鱼日程 —— 月/周/日视图、托盘常驻、桌面悬浮窗",
   "main": "./out/main/index.js",
-  "author": "daily-list",
+  "author": "shark-calendar",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -33,10 +33,10 @@
     "vite": "^5.4.11"
   },
   "build": {
-    "appId": "com.dailylist.app",
-    "productName": "日程",
+    "appId": "com.sharkcalendar.app",
+    "productName": "鲨鱼日程",
     "directories": {
-      "output": "release",
+      "output": "release-v5",
       "buildResources": "resources"
     },
     "files": [
@@ -67,7 +67,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "日程"
+      "shortcutName": "鲨鱼日程"
     }
   }
 }

@@ -64,7 +64,7 @@ export function SyncPanel(): React.ReactElement {
 
       {!settings.syncEnabled && (
         <div className="setting-desc" style={{ lineHeight: 1.7, paddingBottom: 6 }}>
-          开启后，本地创建的日程会在多台设备间同步。订阅日历是派生数据，不参与同步。
+          开启后，本地创建的事件会在多台设备间同步。订阅日历是派生数据，不参与同步。
         </div>
       )}
 

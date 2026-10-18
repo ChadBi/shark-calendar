@@ -1,5 +1,5 @@
 /**
- * 生成应用图标（纯 Node，无第三方依赖）。
+ * 生成鲨鱼日程应用图标（纯 Node，无第三方依赖）。
  * 输出：resources/icon.png（512）、resources/tray.png（32）
  * 用法：node scripts/gen-icon.mjs
  */
@@ -60,12 +60,7 @@ function encodePng(width, height, rgba) {
 
 /* ------------------------------- 图形绘制 ------------------------------- */
 
-const inRect = (u, v, x0, y0, x1, y1) => u >= x0 && u <= x1 && v >= y0 && v <= y1
-
-function inRoundRect(u, v, x0, y0, x1, y1, r) {
-  if (!inRect(u, v, x0, y0, x1, y1)) return false
-  const cx = Math.min(Math.max(u, x0 + r), x1 - r)
-  const cy = Math.min(Math.max(v, y0 + r), y1 - r)
+const inCircle = (u, v, cx, cy, r) => {
   const dx = u - cx
   const dy = v - cy
   return dx * dx + dy * dy <= r * r
@@ -73,42 +68,72 @@ function inRoundRect(u, v, x0, y0, x1, y1, r) {
 
 const lerp = (a, b, t) => a + (b - a) * t
 
+/** 判断点 (u,v) 是否在鲨鱼背鳍形状内 */
+function inSharkFin(u, v) {
+  // 鲨鱼背鳍：底部宽，向上收窄，尖端略弯
+  // 底部中心在 (0.50, 0.72)，尖端在 (0.50, 0.22)
+  // 使用二次贝塞尔曲线轮廓
+
+  const tipX = 0.50
+  const tipY = 0.22
+  const baseLeftX = 0.30
+  const baseRightX = 0.70
+  const baseY = 0.72
+  const curveControlX = 0.62 // 右侧控制点，让背鳍稍向后弯
+  const curveControlY = 0.38
+
+  // 点在底部以下？不在
+  if (v > baseY) return false
+
+  // 点在尖端以上？不在
+  if (v < tipY) return false
+
+  // 计算当前高度处的轮廓宽度
+  const t = (v - tipY) / (baseY - tipY) // 0 在尖端，1 在底部
+
+  // 左边界：直线从尖端到底部左端
+  const leftX = lerp(tipX, baseLeftX, t)
+
+  // 右边界：二次贝塞尔曲线从尖端到控制点到底部右端
+  // B(t) = (1-t)^2 * P0 + 2(1-t)t * P1 + t^2 * P2
+  const mt = 1 - t
+  const rightX = mt * mt * tipX + 2 * mt * t * curveControlX + t * t * baseRightX
+
+  return u >= leftX && u <= rightX
+}
+
+/** 判断点在波浪线（表示水面）附近 */
+function inWave(u, v) {
+  // 波浪线 y = 0.78 + 0.03 * sin(u * PI * 3)
+  const waveY = 0.78 + 0.028 * Math.sin(u * Math.PI * 3.5)
+  const thickness = 0.025
+  return v >= waveY - thickness && v <= waveY + thickness
+}
+
 /** 归一化坐标 (0..1) 上的颜色采样，返回 [r,g,b,a] 或 null(透明) */
 function shade(u, v) {
   const R = 0.235
-  if (!inRoundRect(u, v, 0, 0, 1, 1, R)) return null
+  // 圆形裁切
+  const cx = 0.5, cy = 0.5
+  const dx = u - cx, dy = v - cy
+  if (dx * dx + dy * dy > 0.5 * 0.5) return null
 
-  // 渐变底色：靛蓝 → 深蓝
-  const t = Math.min(1, Math.max(0, (u * 0.35 + v * 0.65)))
-  let r = lerp(0x5b, 0x35, t)
-  let g = lerp(0x8d, 0x56, t)
-  let b = lerp(0xf8, 0xc8, t)
+  // 海洋渐变背景：深海蓝 → 浅海蓝
+  const dist = Math.sqrt(dx * dx + dy * dy) / 0.5
+  const t = Math.min(1, Math.max(0, dist * 0.7 + (v - 0.3) * 0.3))
+
+  // 深蓝 #1a5fb4 → 浅蓝 #62a0ea
+  let r = lerp(0x1a, 0x62, t)
+  let g = lerp(0x5f, 0xa0, t)
+  let b = lerp(0xb4, 0xea, t)
 
   const white = () => [0xff, 0xff, 0xff, 255]
 
-  // 日历外框（描边）
-  const outer = inRoundRect(u, v, 0.215, 0.255, 0.785, 0.805, 0.055)
-  const inner = inRoundRect(u, v, 0.265, 0.305, 0.735, 0.755, 0.032)
-  if (outer && !inner) return white()
+  // 鲨鱼背鳍（白色）
+  if (inSharkFin(u, v)) return white()
 
-  // 顶部实心横条
-  if (inRoundRect(u, v, 0.215, 0.255, 0.785, 0.405, 0.055)) return white()
-
-  // 两个装订环
-  if (inRoundRect(u, v, 0.335, 0.165, 0.395, 0.30, 0.028)) return white()
-  if (inRoundRect(u, v, 0.605, 0.165, 0.665, 0.30, 0.028)) return white()
-
-  // 日期格点
-  const dots = [
-    [0.315, 0.485, 0.395, 0.555],
-    [0.46, 0.485, 0.54, 0.555],
-    [0.605, 0.485, 0.685, 0.555],
-    [0.315, 0.625, 0.395, 0.695],
-    [0.46, 0.625, 0.54, 0.695]
-  ]
-  for (const [x0, y0, x1, y1] of dots) {
-    if (inRoundRect(u, v, x0, y0, x1, y1, 0.022)) return white()
-  }
+  // 水面波浪线（白色，半透明混合）
+  if (inWave(u, v)) return white()
 
   return [Math.round(r), Math.round(g), Math.round(b), 255]
 }
@@ -141,7 +166,6 @@ function render(size) {
         buf[i] = buf[i + 1] = buf[i + 2] = buf[i + 3] = 0
       } else {
         const cover = a / (n * 255)
-        // 预乘后再还原，避免边缘出现白边
         buf[i] = Math.round(r / (n * cover))
         buf[i + 1] = Math.round(g / (n * cover))
         buf[i + 2] = Math.round(b / (n * cover))
