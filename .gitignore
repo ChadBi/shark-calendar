@@ -1,5 +1,6 @@
 node_modules/
 out/
+out.bak.*
 release/
 smoke/
 *.log
