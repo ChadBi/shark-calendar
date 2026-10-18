@@ -80,11 +80,9 @@ function splitProp(line: string): RawProp | null {
 }
 
 function unescapeText(v: string): string {
+  // 必须一次性替换：如果先换 \n 再换 \\，字面量 "\\n"（反斜杠+n）会被误还原成换行
   return v
-    .replace(/\\n/gi, '\n')
-    .replace(/\\,/g, ',')
-    .replace(/\\;/g, ';')
-    .replace(/\\\\/g, '\\')
+    .replace(/\\([\\;,nN])/g, (_, ch: string) => (ch === 'n' || ch === 'N' ? '\n' : ch))
     .trim()
 }
 
@@ -291,8 +289,69 @@ export function normalizeIcsUrl(raw: string): string {
 }
 
 const MAX_BYTES = 8 * 1024 * 1024
+const FETCH_TIMEOUT_MS = 15000
 
-/** 拉取订阅内容。走 Electron 的 net 而不是 Node fetch，以复用系统代理设置 */
+/**
+ * 拉取订阅内容。
+ *
+ * 用 Electron 的 net.request 而不是 net.fetch：后者对 AbortSignal 的支持不可靠，
+ * 遇到「接受连接但永不响应」的地址会一直挂着，导致订阅面板永久卡在「同步中」。
+ * net.request 的 abort() 是确定能中断的。走 net 而不是 Node fetch 也是为了复用系统代理。
+ */
+function fetchViaNet(url: string, timeoutMs: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = (fn: () => void): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      fn()
+    }
+
+    const request = net.request({ url, redirect: 'follow' })
+
+    const timer = setTimeout(() => {
+      finish(() => {
+        request.abort()
+        reject(new Error('请求超时（15 秒），请检查网络或链接'))
+      })
+    }, timeoutMs)
+
+    request.on('response', (response) => {
+      const chunks: Buffer[] = []
+      let size = 0
+
+      response.on('data', (chunk) => {
+        size += chunk.length
+        if (size > MAX_BYTES) {
+          finish(() => {
+            request.abort()
+            reject(new Error('日历文件超过 8MB，已拒绝'))
+          })
+          return
+        }
+        chunks.push(chunk)
+      })
+
+      response.on('end', () => {
+        finish(() => {
+          const status = response.statusCode
+          if (status < 200 || status >= 300) {
+            reject(new Error(`服务器返回 ${status}`))
+            return
+          }
+          resolve(Buffer.concat(chunks))
+        })
+      })
+
+      response.on('error', (err) => finish(() => reject(err)))
+    })
+
+    request.on('error', (err) => finish(() => reject(err)))
+    request.end()
+  })
+}
+
 export async function fetchIcs(url: string): Promise<string> {
   const target = normalizeIcsUrl(url)
   let parsed: URL
@@ -303,13 +362,13 @@ export async function fetchIcs(url: string): Promise<string> {
   }
   if (!/^https?:$/.test(parsed.protocol)) throw new Error('只支持 http / https / webcal 链接')
 
-  const res = await net.fetch(target, { redirect: 'follow' })
-  if (!res.ok) throw new Error(`服务器返回 ${res.status}`)
-
-  const buf = await res.arrayBuffer()
-  if (buf.byteLength > MAX_BYTES) throw new Error('日历文件超过 8MB，已拒绝')
-
+  const buf = await fetchViaNet(target, FETCH_TIMEOUT_MS)
   const text = new TextDecoder('utf-8').decode(buf)
-  if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error('这不是有效的 iCalendar 文件')
+
+  // 只校验开头不够：代理中断会给出半截响应，解析出 0 条事件后会把用户
+  // 已有的日程整个清空。必须同时要求结尾标记。
+  if (!/BEGIN:VCALENDAR/i.test(text) || !/END:VCALENDAR/i.test(text)) {
+    throw new Error('这不是完整的 iCalendar 文件')
+  }
   return text
 }

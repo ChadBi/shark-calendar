@@ -91,9 +91,12 @@ export const useApp = create<State>()((set, get) => ({
       const ev = get().events.find((e) => e.id === id)
       if (ev) get().openEdit(ev)
     })
-    window.api.onMigrated(() => {
-      get().showToast('悬浮窗已改为普通窗口，不再遮挡其他应用')
-    })
+    // 迁移提示从数据里读，不依赖主进程 push（push 会和渲染进程的监听注册抢时序）
+    if (data.migratedFrom != null) {
+      setTimeout(() => {
+        get().showToast('悬浮窗已改为普通窗口，不再遮挡其他应用')
+      }, 600)
+    }
   },
 
   setView: (v) => set({ view: v }),

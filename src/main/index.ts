@@ -13,7 +13,8 @@ import { join } from 'path'
 import { existsSync } from 'fs'
 import { Store } from './store'
 import { syncAll, syncSource } from './sync'
-import type { CalendarEvent, EventColor, Settings, WidgetBounds } from '../shared/types'
+import { normalizeIcsUrl } from './ics'
+import type { CalendarEvent, CalendarSource, EventColor, Settings, WidgetBounds } from '../shared/types'
 
 const isDev = !app.isPackaged
 
@@ -78,7 +79,8 @@ function defaultWidgetBounds(): WidgetBounds {
 function safeWidgetBounds(): WidgetBounds {
   const saved = store.settings.widgetBounds
   if (!saved) return defaultWidgetBounds()
-  const stillVisible = screen.getAllDisplays().some((d) => {
+
+  const hit = screen.getAllDisplays().find((d) => {
     const a = d.workArea
     return (
       saved.x < a.x + a.width &&
@@ -87,7 +89,17 @@ function safeWidgetBounds(): WidgetBounds {
       saved.y + saved.height > a.y
     )
   })
-  return stillVisible ? saved : defaultWidgetBounds()
+  if (!hit) return defaultWidgetBounds()
+
+  // 只判断「有交集」不够：窗口可能只露出一个角，用户照样够不着。
+  // 夹取到该屏幕工作区内。
+  const a = hit.workArea
+  return {
+    x: Math.min(Math.max(saved.x, a.x), a.x + a.width - saved.width),
+    y: Math.min(Math.max(saved.y, a.y), a.y + a.height - saved.height),
+    width: saved.width,
+    height: saved.height
+  }
 }
 
 /* ------------------------------------------------------------------ 主窗口 */
@@ -299,7 +311,7 @@ function broadcast(): void {
 /* ------------------------------------------------------------------- IPC */
 
 function registerIpc(): void {
-  ipcMain.handle('data:get', () => store.snapshot())
+  ipcMain.handle('data:get', () => ({ ...store.snapshot(), migratedFrom: store.migratedFrom }))
 
   ipcMain.handle('events:upsert', (_e, input: Partial<CalendarEvent> & { title: string; start: string; end: string }) => {
     const ev = store.upsertEvent(input)
@@ -361,20 +373,33 @@ function registerIpc(): void {
   /* ------------------------------------------------------------ 日历订阅 */
 
   ipcMain.handle('sources:add', async (_e, input: { name: string; url: string; color?: EventColor }) => {
-    // 同一个链接重复添加会创建两个源、同步出两份一模一样的事件，
-    // 所以按 URL 去重：已存在就直接复用并刷新它。
-    const normalized = input.url.trim()
-    const existing = store.data.sources.find((s) => s.url.trim() === normalized)
+    // webcal:// 与 https:// 指向同一份日历时必须视为同一个源，
+    // 否则会同步出两份一模一样的事件。比较前统一归一化。
+    const normalized = normalizeIcsUrl(input.url.trim())
+    const existing = store.data.sources.find((s) => normalizeIcsUrl(s.url.trim()) === normalized)
     if (existing) {
       const result = await syncSource(store, existing)
       broadcast()
       return { source: existing, result }
     }
 
-    const src = store.upsertSource({ name: input.name, url: normalized, color: input.color })
-    const result = await syncSource(store, src)
+    // 先同步、成功才落盘：否则用户填错链接会留下一条永远失败的僵尸订阅，
+    // 而且每 6 小时重试一次，越攒越多。
+    const draft: CalendarSource = {
+      id: crypto.randomUUID(),
+      name: input.name.trim() || '订阅日历',
+      url: normalized,
+      color: input.color ?? 'violet',
+      enabled: true,
+      hidden: []
+    }
+    const result = await syncSource(store, draft)
+    if (result.ok) {
+      store.data.sources.push(draft)
+      store.save()
+    }
     broadcast()
-    return { source: store.data.sources.find((s) => s.id === src.id), result }
+    return { source: result.ok ? draft : undefined, result }
   })
 
   ipcMain.handle('sources:remove', (_e, id: string) => {
@@ -430,12 +455,8 @@ if (!gotLock) {
     mainWindow = createMainWindow()
     createTray()
 
-    // v1 → v2 迁移提示：老用户的悬浮窗会被改成「不置顶」，得告诉他们发生了什么
-    if (store.migratedFrom !== null) {
-      mainWindow.webContents.once('did-finish-load', () => {
-        mainWindow?.webContents.send('app:migrated', store.migratedFrom)
-      })
-    }
+    // 迁移提示不再用 webContents.send 推送：页面可能在监听注册之前就加载完，
+    // 事件会永久丢失。改为放进 data:get 的返回值，由渲染进程主动读。
 
     // 订阅日历：启动后延迟拉一次（别和窗口初始化抢网络），之后每 6 小时刷新
     const runSync = (): void => {

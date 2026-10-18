@@ -52,7 +52,9 @@ export class Store {
       }
 
       return {
-        schemaVersion: SCHEMA_VERSION,
+        // 数据来自更新版本时不要把版本号降下来，否则未来 v3 的数据
+        // 被旧版程序打开会被误标成 v2，回滚时又触发一次迁移
+        schemaVersion: version > SCHEMA_VERSION ? version : SCHEMA_VERSION,
         events: Array.isArray(parsed.events) ? parsed.events : [],
         sources: Array.isArray(parsed.sources) ? parsed.sources : [],
         settings

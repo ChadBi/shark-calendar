@@ -2,6 +2,7 @@ node_modules/
 out/
 out.bak.*
 release/
+release-v*/
 smoke/
 *.log
 .DS_Store

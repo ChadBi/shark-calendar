@@ -90,7 +90,7 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
     }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
-      commit()
+      if (!readOnly) commit()
     }
   }
 

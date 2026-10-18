@@ -71,32 +71,38 @@ export async function syncSource(store: Store, source: CalendarSource): Promise<
     }
 
     const { before } = store.replaceSourceEvents(source.id, events)
-    const src = store.data.sources.find((s) => s.id === source.id)
-    if (src) {
-      src.lastSyncAt = stamp
-      src.lastError = undefined
-      src.eventCount = events.length
-    }
+    // 直接改传入的对象：它可能是尚未入库的草稿源（添加订阅时先同步成功再落盘）
+    source.lastSyncAt = stamp
+    source.lastError = undefined
+    source.eventCount = events.length
+    source.truncated = truncated
     store.save()
 
     return { ...base, ok: true, added: events.length, removed: Math.max(0, before - events.length), truncated }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    const src = store.data.sources.find((s) => s.id === source.id)
-    if (src) {
-      // 失败时保留上一次的数据，只记录错误——断网不应该让用户的日历变空
-      src.lastError = message
-    }
+    // 失败时保留上一次的数据，只记录错误——断网不应该让用户的日历变空
+    source.lastError = message
     store.save()
     return { ...base, ok: false, error: message }
   }
 }
 
+/** 并发拉取所有启用的源：串行的话一个慢源会拖住后面全部 */
 export async function syncAll(store: Store): Promise<SyncResult[]> {
   const enabled = store.data.sources.filter((s) => s.enabled)
-  const results: SyncResult[] = []
-  for (const src of enabled) {
-    results.push(await syncSource(store, src))
-  }
-  return results
+  const settled = await Promise.allSettled(enabled.map((s) => syncSource(store, s)))
+  return settled.map((r, i) =>
+    r.status === 'fulfilled'
+      ? r.value
+      : {
+          ok: false,
+          sourceId: enabled[i].id,
+          sourceName: enabled[i].name,
+          added: 0,
+          removed: 0,
+          truncated: false,
+          error: r.reason instanceof Error ? r.reason.message : String(r.reason)
+        }
+  )
 }

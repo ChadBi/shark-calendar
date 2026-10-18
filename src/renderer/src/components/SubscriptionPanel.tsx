@@ -89,6 +89,9 @@ export function SubscriptionPanel(): React.ReactElement {
               ) : src.lastSyncAt ? (
                 <>
                   {format(new Date(src.lastSyncAt), 'M/d HH:mm')} 同步 · {src.eventCount ?? 0} 条
+                  {src.truncated && (
+                    <span style={{ color: 'var(--amber, #a35f00)' }}>（已达上限，部分未导入）</span>
+                  )}
                 </>
               ) : (
                 '尚未同步'

@@ -124,7 +124,8 @@ async function runOnce(label) {
         alwaysOnTop: d.settings.widgetAlwaysOnTop,
         events: d.events.length,
         firstTitle: d.events[0]?.title ?? null,
-        sources: (d.sources || []).length
+        sources: (d.sources || []).length,
+        migratedFrom: d.migratedFrom ?? null
       })
     })()`,
     awaitPromise: true,
@@ -154,6 +155,8 @@ try {
   check('老事件未丢失', first.events, 1)
   check('老事件标题完好', first.firstTitle, '迁移前就存在的日程')
   check('sources 字段补齐为空数组', first.sources, 0)
+  // P1-4：迁移提示必须真的能送到渲染进程，靠 data:get 返回值而不是 push
+  check('渲染进程能读到迁移标记', first.migratedFrom, 1)
 
   // 落盘检查
   const onDisk = JSON.parse(readFileSync(join(USERDATA, 'daily-list.json'), 'utf-8'))
@@ -169,6 +172,7 @@ try {
   const second = await runOnce('second')
   check('用户主动开启的置顶被保留', second.alwaysOnTop, true)
   check('事件仍然完好', second.events, 1)
+  check('二次启动不再提示迁移', second.migratedFrom, null)
 } catch (err) {
   console.error('✗ 测试失败：', err.message)
   failures++

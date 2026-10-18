@@ -38,6 +38,8 @@ export interface CalendarSource {
   lastSyncAt?: string
   lastError?: string
   eventCount?: number
+  /** 命中单源实例上限，只导入了部分事件 */
+  truncated?: boolean
   /** 被用户「忽略此次」的实例 key（uid:startISO） */
   hidden?: string[]
 }
@@ -71,6 +73,8 @@ export interface AppData {
   events: CalendarEvent[]
   sources: CalendarSource[]
   settings: Settings
+  /** 本次启动发生迁移时带旧版本号，渲染进程据此给一次性提示 */
+  migratedFrom?: number | null
 }
 
 /** 单次订阅同步的结果 */
