@@ -12,7 +12,8 @@ import {
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { Store } from './store'
-import type { CalendarEvent, Settings, WidgetBounds } from '../shared/types'
+import { syncAll, syncSource } from './sync'
+import type { CalendarEvent, EventColor, Settings, WidgetBounds } from '../shared/types'
 
 const isDev = !app.isPackaged
 
@@ -179,8 +180,8 @@ function createWidgetWindow(): BrowserWindow {
   })
 
   win.setAlwaysOnTop(store.settings.widgetAlwaysOnTop, 'floating')
-  // 不抢焦点：点悬浮窗不应该把正在全屏/前台的应用踢下去
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  // 刻意不调用 setVisibleOnAllWorkspaces：那会让悬浮窗压在全屏应用之上，
+  // 与「和桌面同级、不遮挡其他窗口」的预期相反。
 
   win.once('ready-to-show', () => win.showInactive())
 
@@ -206,7 +207,13 @@ function showWidget(): void {
   if (!widgetWindow || widgetWindow.isDestroyed()) {
     widgetWindow = createWidgetWindow()
   }
-  widgetWindow.showInactive()
+  const win = widgetWindow
+  win.showInactive()
+  // 不置顶时窗口可能被别的应用压在下面，唤出要显式提到同层最前，
+  // 否则用户从托盘点了「显示悬浮窗」却什么也看不到。
+  // 首次创建时窗口还没 ready，showInactive 是异步的，得等真正显示后再提。
+  if (win.isVisible()) win.moveTop()
+  else win.once('show', () => win.moveTop())
 }
 
 function hideWidget(): void {
@@ -351,6 +358,47 @@ function registerIpc(): void {
 
   ipcMain.handle('app:openMain', () => showMain())
 
+  /* ------------------------------------------------------------ 日历订阅 */
+
+  ipcMain.handle('sources:add', async (_e, input: { name: string; url: string; color?: EventColor }) => {
+    // 同一个链接重复添加会创建两个源、同步出两份一模一样的事件，
+    // 所以按 URL 去重：已存在就直接复用并刷新它。
+    const normalized = input.url.trim()
+    const existing = store.data.sources.find((s) => s.url.trim() === normalized)
+    if (existing) {
+      const result = await syncSource(store, existing)
+      broadcast()
+      return { source: existing, result }
+    }
+
+    const src = store.upsertSource({ name: input.name, url: normalized, color: input.color })
+    const result = await syncSource(store, src)
+    broadcast()
+    return { source: store.data.sources.find((s) => s.id === src.id), result }
+  })
+
+  ipcMain.handle('sources:remove', (_e, id: string) => {
+    store.removeSource(id)
+    broadcast()
+  })
+
+  ipcMain.handle('sources:sync', async (_e, id?: string) => {
+    let results
+    if (id) {
+      const src = store.data.sources.find((s) => s.id === id)
+      results = src ? [await syncSource(store, src)] : []
+    } else {
+      results = await syncAll(store)
+    }
+    broadcast()
+    return results
+  })
+
+  ipcMain.handle('sources:hideInstance', (_e, sourceId: string, key: string) => {
+    store.hideInstance(sourceId, key)
+    broadcast()
+  })
+
   // 从悬浮窗点某条日程 → 打开主窗口并弹出该日程的编辑框
   ipcMain.handle('app:openEvent', (_e, id: string) => {
     showMain()
@@ -381,6 +429,22 @@ if (!gotLock) {
 
     mainWindow = createMainWindow()
     createTray()
+
+    // v1 → v2 迁移提示：老用户的悬浮窗会被改成「不置顶」，得告诉他们发生了什么
+    if (store.migratedFrom !== null) {
+      mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow?.webContents.send('app:migrated', store.migratedFrom)
+      })
+    }
+
+    // 订阅日历：启动后延迟拉一次（别和窗口初始化抢网络），之后每 6 小时刷新
+    const runSync = (): void => {
+      void syncAll(store).then((results) => {
+        if (results.length > 0) broadcast()
+      })
+    }
+    setTimeout(runSync, 5000).unref()
+    setInterval(runSync, 6 * 60 * 60 * 1000).unref()
 
     if (store.settings.launchAtLogin) app.setLoginItemSettings({ openAtLogin: true })
     if (store.settings.showWidgetOnStart) showWidget()

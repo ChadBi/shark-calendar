@@ -16,6 +16,12 @@ const api: AppApi = {
   quit: () => ipcRenderer.invoke('app:quit'),
   openDataFolder: () => ipcRenderer.invoke('app:dataFolder'),
 
+  addSource: (input) => ipcRenderer.invoke('sources:add', input),
+  removeSource: (id: string) => ipcRenderer.invoke('sources:remove', id),
+  syncSources: (id?: string) => ipcRenderer.invoke('sources:sync', id),
+  hideInstance: (sourceId: string, key: string) =>
+    ipcRenderer.invoke('sources:hideInstance', sourceId, key),
+
   onDataChanged: (cb: (data: AppData) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, data: AppData): void => cb(data)
     ipcRenderer.on('data:changed', listener)
@@ -32,6 +38,12 @@ const api: AppApi = {
     const listener = (_e: Electron.IpcRendererEvent, id: string): void => cb(id)
     ipcRenderer.on('app:open-event', listener)
     return () => ipcRenderer.removeListener('app:open-event', listener)
+  },
+
+  onMigrated: (cb: (fromVersion: number) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, v: number): void => cb(v)
+    ipcRenderer.on('app:migrated', listener)
+    return () => ipcRenderer.removeListener('app:migrated', listener)
   }
 }
 

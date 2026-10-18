@@ -53,6 +53,18 @@ const P: Record<string, ReactNode> = {
     </>
   ),
   check: <path d="M20 6.5L9.5 17 4 11.5" />,
+  refresh: (
+    <>
+      <path d="M20.5 12a8.5 8.5 0 11-2.6-6.1" />
+      <path d="M20.5 3.5V9h-5.5" />
+    </>
+  ),
+  link: (
+    <>
+      <path d="M10 13a5 5 0 007.5.5l2-2a5 5 0 00-7-7l-1 1" />
+      <path d="M14 11a5 5 0 00-7.5-.5l-2 2a5 5 0 007 7l1-1" />
+    </>
+  ),
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />

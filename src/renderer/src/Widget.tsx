@@ -57,6 +57,13 @@ export default function Widget(): React.ReactElement {
         </div>
 
         <div className="wg-actions">
+          <button
+            className={`wg-btn${settings.widgetAlwaysOnTop ? ' active' : ''}`}
+            onClick={() => void window.api.setWidgetPinned(!settings.widgetAlwaysOnTop)}
+            title={settings.widgetAlwaysOnTop ? '取消置顶（当前会遮挡其他窗口）' : '置顶显示'}
+          >
+            <Icon name="pin" size={12} />
+          </button>
           <button className="wg-btn" onClick={() => setCollapsed((v) => !v)} title={collapsed ? '展开' : '收起'}>
             <Icon name={collapsed ? 'chevronLeft' : 'chevronRight'} size={13} />
           </button>

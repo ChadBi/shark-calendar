@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useApp } from '../store'
 import { Icon } from './Icon'
+import { SubscriptionPanel } from './SubscriptionPanel'
 
 function Row({
   label,
@@ -81,7 +82,10 @@ export function SettingsPanel(): React.ReactElement {
             桌面悬浮窗
           </div>
 
-          <Row label="窗口置顶" desc="始终显示在其他窗口上方">
+          <Row
+            label="置顶显示"
+            desc="开启后会一直压在其他窗口上方；关闭时和普通窗口同级，切到别的应用会被遮挡"
+          >
             <Switch
               on={settings.widgetAlwaysOnTop}
               onClick={() => patch({ widgetAlwaysOnTop: !settings.widgetAlwaysOnTop })}
@@ -138,6 +142,8 @@ export function SettingsPanel(): React.ReactElement {
               </button>
             </div>
           </Row>
+
+          <SubscriptionPanel />
 
           <Row label="数据" desc="所有数据保存在本机，不上传">
             <button className="btn" onClick={() => window.api.openDataFolder()}>

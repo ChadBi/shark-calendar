@@ -1,5 +1,12 @@
 import { create } from 'zustand'
-import type { CalendarEvent, EventColor, Settings, ViewMode } from '../../shared/types'
+import type {
+  CalendarEvent,
+  CalendarSource,
+  EventColor,
+  Settings,
+  SyncResult,
+  ViewMode
+} from '../../shared/types'
 import { DEFAULT_SETTINGS } from '../../shared/defaults'
 import { shiftCursor, startOfDay } from './lib/date'
 
@@ -11,17 +18,24 @@ export interface EditorDraft {
   allDay: boolean
   color: EventColor
   notes?: string
+  /** 订阅事件：只读，不能直接改 */
+  readOnly?: boolean
+  sourceId?: string
+  externalId?: string
+  location?: string
 }
 
 interface State {
   ready: boolean
   events: CalendarEvent[]
+  sources: CalendarSource[]
   settings: Settings
   view: ViewMode
   cursor: Date
   editing: EditorDraft | null
   settingsOpen: boolean
   quickAddOpen: boolean
+  syncing: boolean
   toast: string | null
 
   init: () => Promise<void>
@@ -38,6 +52,11 @@ interface State {
   setSettingsOpen: (b: boolean) => void
   setQuickAddOpen: (b: boolean) => void
   showToast: (msg: string) => void
+
+  addSource: (name: string, url: string) => Promise<SyncResult | null>
+  removeSource: (id: string) => Promise<void>
+  syncSources: (id?: string) => Promise<SyncResult[]>
+  hideInstance: (sourceId: string, key: string) => Promise<void>
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null
@@ -45,12 +64,14 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null
 export const useApp = create<State>()((set, get) => ({
   ready: false,
   events: [],
+  sources: [],
   settings: DEFAULT_SETTINGS,
   view: 'month',
   cursor: new Date(),
   editing: null,
   settingsOpen: false,
   quickAddOpen: false,
+  syncing: false,
   toast: null,
 
   init: async () => {
@@ -58,14 +79,20 @@ export const useApp = create<State>()((set, get) => ({
     set({
       ready: true,
       events: data.events,
+      sources: data.sources ?? [],
       settings: data.settings,
       view: data.settings.defaultView ?? 'month'
     })
-    window.api.onDataChanged((d) => set({ events: d.events, settings: d.settings }))
+    window.api.onDataChanged((d) =>
+      set({ events: d.events, sources: d.sources ?? [], settings: d.settings })
+    )
     window.api.onQuickAdd(() => set({ quickAddOpen: true }))
     window.api.onOpenEvent((id) => {
       const ev = get().events.find((e) => e.id === id)
       if (ev) get().openEdit(ev)
+    })
+    window.api.onMigrated(() => {
+      get().showToast('悬浮窗已改为普通窗口，不再遮挡其他应用')
     })
   },
 
@@ -94,7 +121,11 @@ export const useApp = create<State>()((set, get) => ({
         end: new Date(ev.end),
         allDay: ev.allDay,
         color: ev.color,
-        notes: ev.notes
+        notes: ev.notes,
+        readOnly: ev.readOnly,
+        sourceId: ev.sourceId,
+        externalId: ev.externalId,
+        location: ev.location
       }
     })
   },
@@ -132,6 +163,51 @@ export const useApp = create<State>()((set, get) => ({
   showToast: (msg) => {
     set({ toast: msg })
     if (toastTimer) clearTimeout(toastTimer)
-    toastTimer = setTimeout(() => set({ toast: null }), 1800)
+    toastTimer = setTimeout(() => set({ toast: null }), 2200)
+  },
+
+  /* ---------------------------------------------------------- 订阅 */
+
+  addSource: async (name, url) => {
+    set({ syncing: true })
+    try {
+      const { result } = await window.api.addSource({ name, url })
+      get().showToast(
+        result.ok ? `已添加订阅，导入 ${result.added} 条日程` : `订阅失败：${result.error ?? '未知错误'}`
+      )
+      return result
+    } catch (err) {
+      get().showToast(`订阅失败：${err instanceof Error ? err.message : String(err)}`)
+      return null
+    } finally {
+      set({ syncing: false })
+    }
+  },
+
+  removeSource: async (id) => {
+    await window.api.removeSource(id)
+    get().showToast('已移除订阅，其日程一并删除')
+  },
+
+  syncSources: async (id) => {
+    set({ syncing: true })
+    try {
+      const results = await window.api.syncSources(id)
+      const failed = results.filter((r) => !r.ok)
+      if (failed.length > 0) {
+        get().showToast(`${failed.length} 个订阅同步失败：${failed[0].error ?? ''}`)
+      } else if (results.length > 0) {
+        const total = results.reduce((n, r) => n + r.added, 0)
+        get().showToast(`同步完成，共 ${total} 条日程`)
+      }
+      return results
+    } finally {
+      set({ syncing: false })
+    }
+  },
+
+  hideInstance: async (sourceId, key) => {
+    await window.api.hideInstance(sourceId, key)
+    get().showToast('已忽略此次')
   }
 }))

@@ -1140,6 +1140,11 @@ textarea {
   width: 420px;
 }
 
+.settings-sheet .modal-body {
+  max-height: 68vh;
+  overflow-y: auto;
+}
+
 .setting-row {
   display: flex;
   align-items: center;
@@ -1204,4 +1209,93 @@ kbd {
   border-radius: 4px;
   padding: 1px 4px;
   color: var(--text-2);
+}
+
+/* ------------------------------------------------------- 日历订阅 */
+
+.source-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+
+.source-form-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.source-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  border-radius: var(--radius-sm);
+}
+
+.source-item:hover {
+  background: var(--surface-3);
+}
+
+.source-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.source-name {
+  font-size: 12.5px;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-meta {
+  font-size: 10.5px;
+  color: var(--text-3);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-weak);
+  color: var(--brand-strong);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 只读事件在月视图里的标记 */
+.chip.locked::after {
+  content: '';
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  flex: none;
+  margin-left: auto;
 }

@@ -18,6 +18,28 @@ export interface CalendarEvent {
   rev: number
   /** 软删除，供未来同步墓碑使用 */
   deleted?: boolean
+  /** 来自订阅源时记录来源；本地创建的事件为空 */
+  sourceId?: string
+  /** 订阅源里的原始 UID，用于稳定生成实例 id */
+  externalId?: string
+  /** 订阅事件只读，不能直接编辑或删除 */
+  readOnly?: boolean
+  location?: string
+}
+
+/** 一个 ICS 订阅源 */
+export interface CalendarSource {
+  id: string
+  name: string
+  url: string
+  color: EventColor
+  enabled: boolean
+  /** 上次同步时间 ISO */
+  lastSyncAt?: string
+  lastError?: string
+  eventCount?: number
+  /** 被用户「忽略此次」的实例 key（uid:startISO） */
+  hidden?: string[]
 }
 
 export interface WidgetBounds {
@@ -47,7 +69,20 @@ export interface AppData {
   /** 数据结构版本，供未来迁移/同步使用 */
   schemaVersion: number
   events: CalendarEvent[]
+  sources: CalendarSource[]
   settings: Settings
+}
+
+/** 单次订阅同步的结果 */
+export interface SyncResult {
+  ok: boolean
+  sourceId: string
+  sourceName: string
+  added: number
+  removed: number
+  /** 命中单源实例上限，结果被截断 */
+  truncated: boolean
+  error?: string
 }
 
 export interface AppApi {
@@ -64,9 +99,20 @@ export interface AppApi {
   openEvent(id: string): Promise<void>
   quit(): Promise<void>
   openDataFolder(): Promise<void>
+
+  /* 日历订阅 */
+  addSource(input: { name: string; url: string; color?: EventColor }): Promise<{
+    source?: CalendarSource
+    result: SyncResult
+  }>
+  removeSource(id: string): Promise<void>
+  syncSources(id?: string): Promise<SyncResult[]>
+  hideInstance(sourceId: string, key: string): Promise<void>
+
   onDataChanged(cb: (data: AppData) => void): () => void
   onQuickAdd(cb: () => void): () => void
   onOpenEvent(cb: (id: string) => void): () => void
+  onMigrated(cb: (fromVersion: number) => void): () => void
 }
 
 declare global {

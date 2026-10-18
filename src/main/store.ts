@@ -1,13 +1,13 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFileSync } from 'fs'
-import type { AppData, CalendarEvent, Settings } from '../shared/types'
+import type { AppData, CalendarEvent, CalendarSource, Settings } from '../shared/types'
 import { DEFAULT_SETTINGS, SCHEMA_VERSION } from '../shared/defaults'
 
 export { DEFAULT_SETTINGS, SCHEMA_VERSION }
 
 function emptyData(): AppData {
-  return { schemaVersion: SCHEMA_VERSION, events: [], settings: { ...DEFAULT_SETTINGS } }
+  return { schemaVersion: SCHEMA_VERSION, events: [], sources: [], settings: { ...DEFAULT_SETTINGS } }
 }
 
 /**
@@ -23,6 +23,8 @@ function emptyData(): AppData {
 export class Store {
   private filePath: string
   private saveTimer: NodeJS.Timeout | null = null
+  /** 本次启动是否从旧版本迁移而来，用于给用户一次性提示 */
+  migratedFrom: number | null = null
   data: AppData
 
   constructor() {
@@ -30,6 +32,7 @@ export class Store {
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
     this.filePath = join(dir, 'daily-list.json')
     this.data = this.load()
+    if (this.migratedFrom !== null) this.saveNow()
   }
 
   private load(): AppData {
@@ -37,10 +40,22 @@ export class Store {
     try {
       const raw = readFileSync(this.filePath, 'utf-8')
       const parsed = JSON.parse(raw) as Partial<AppData>
+      const version = parsed.schemaVersion ?? 1
+      let settings: Settings = { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) }
+
+      if (version < 2) {
+        // v2 迁移：悬浮窗从「始终置顶」改为「与普通窗口同级」。
+        // 关键点：老配置里已经持久化了 widgetAlwaysOnTop: true，
+        // 仅修改默认值对老用户完全无效，必须在这里显式改写。
+        settings = { ...settings, widgetAlwaysOnTop: false }
+        this.migratedFrom = version
+      }
+
       return {
-        schemaVersion: parsed.schemaVersion ?? SCHEMA_VERSION,
+        schemaVersion: SCHEMA_VERSION,
         events: Array.isArray(parsed.events) ? parsed.events : [],
-        settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) }
+        sources: Array.isArray(parsed.sources) ? parsed.sources : [],
+        settings
       }
     } catch (err) {
       // 文件损坏时先留档再重置，避免用户数据被静默清空
@@ -141,11 +156,63 @@ export class Store {
     return this.data.settings
   }
 
+  /* ------------------------------------------------------------ 订阅源 */
+
+  upsertSource(input: Partial<CalendarSource> & { name: string; url: string }): CalendarSource {
+    const existing = input.id ? this.data.sources.find((s) => s.id === input.id) : undefined
+    if (existing) {
+      existing.name = input.name
+      existing.url = input.url
+      if (input.color) existing.color = input.color
+      if (input.enabled !== undefined) existing.enabled = input.enabled
+      this.save()
+      return existing
+    }
+    const created: CalendarSource = {
+      id: crypto.randomUUID(),
+      name: input.name,
+      url: input.url,
+      color: input.color ?? 'violet',
+      enabled: input.enabled ?? true,
+      hidden: []
+    }
+    this.data.sources.push(created)
+    this.save()
+    return created
+  }
+
+  removeSource(id: string): void {
+    this.data.sources = this.data.sources.filter((s) => s.id !== id)
+    this.data.events = this.data.events.filter((e) => e.sourceId !== id)
+    this.save()
+  }
+
+  /** 用最新拉取结果整体替换某个源的事件，避免重复堆积 */
+  replaceSourceEvents(sourceId: string, events: CalendarEvent[]): { before: number; after: number } {
+    const before = this.data.events.filter((e) => e.sourceId === sourceId && !e.deleted).length
+    this.data.events = this.data.events.filter((e) => e.sourceId !== sourceId)
+    this.data.events.push(...events)
+    this.save()
+    return { before, after: events.length }
+  }
+
+  /** 「忽略此次」：把某个重复实例加入黑名单，下次同步不再生成 */
+  hideInstance(sourceId: string, key: string): void {
+    const src = this.data.sources.find((s) => s.id === sourceId)
+    if (!src) return
+    src.hidden = Array.from(new Set([...(src.hidden ?? []), key]))
+    this.data.events = this.data.events.filter(
+      (e) => !(e.sourceId === sourceId && `${e.externalId}:${e.start}` === key)
+    )
+    this.save()
+  }
+
   /** 渲染进程可见的数据：过滤掉软删除的墓碑 */
   snapshot(): AppData {
     return {
       schemaVersion: this.data.schemaVersion,
       events: this.data.events.filter((e) => !e.deleted),
+      sources: this.data.sources,
       settings: this.data.settings
     }
   }
