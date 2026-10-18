@@ -1,173 +1,288 @@
-# 🦈 鲨鱼日程
+<div align="center">
 
-一个常驻托盘的 Windows 桌面日程软件。月 / 周 / 日三种视图，一个贴在桌面上的悬浮小窗，支持 ICS 订阅导入 Google / Outlook 日历，以及多设备云同步。
+<img src="resources/icon.png" alt="鲨鱼日程吉祥物" width="112" />
 
-![月视图](screenshots/month.png)
+# 鲨鱼日程
 
-| 周视图 | 日视图 |
-| --- | --- |
-| ![周视图](screenshots/week.png) | ![日视图](screenshots/day.png) |
+**把安排记下来，把注意力留给眼前。**
 
-| 桌面悬浮窗 | 快速添加 |
-| --- | --- |
-| ![悬浮窗](screenshots/widget.png) | ![快速添加](screenshots/quickadd.png) |
+一款常驻托盘的 Windows 桌面日程应用。<br />
+用一句话记录安排，在月、周、日之间切换，让今天的计划留在桌面上。
 
-| 订阅外部日历 | 订阅管理 |
-| --- | --- |
-| ![订阅](screenshots/subscription.png) | ![订阅管理](screenshots/subscription-settings.png) |
+<p>
+  <img src="https://img.shields.io/badge/平台-Windows_x64-3b6ff5?style=flat-square" alt="平台：Windows x64" />
+  <img src="https://img.shields.io/badge/版本-0.3.0-3b6ff5?style=flat-square" alt="源码版本：0.3.0" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-12a97a?style=flat-square" alt="MIT 许可证" /></a>
+</p>
 
-## 功能
+[界面预览](#界面预览) · [功能亮点](#功能亮点) · [开始使用](#开始使用) · [开发指南](#开发指南) · [更新日志](CHANGELOG.md)
 
-**三种视图**
+<br />
 
-- **月视图**：固定 6×7 网格，每格按可用高度自动显示 N 条事件，超出部分折叠为「还有 X 项」
-- **周视图**：7 列 × 24 小时时间轴，重叠的事件自动并排分栏，当前时间有红线指示
-- **日视图**：单列时间轴 + 右侧当日详情面板
+<img src="screenshots/month.png" alt="月视图：整月安排与今天的事件列表" width="100%" />
 
-**记一条日程的成本要足够低**
+<sub>月 / 周 / 日视图 · 自然语言输入 · 桌面悬浮窗 · ICS 订阅 · 可选云同步</sub>
 
-- `Ctrl + K` 打开快速添加，直接输入 `明天下午3点 和设计对需求 1小时`，回车即存
-- 支持 `今天/明天/后天`、`周五/下周一`、`10/20`、`下午3点/14:30/晚上八点半`、`2小时/30分钟`
-- 解析结果实时预览，认不出来就退回到完整表单，不会丢输入
+</div>
 
-**桌面悬浮窗**
+<br />
 
-- 无边框透明小卡片，显示今天的所有安排，进行中的那条会高亮并带呼吸圆点
-- **默认不置顶**：和普通窗口同级，切到浏览器或编辑器时会被自然遮挡，不会一直压在别的窗口上面
-- 需要常驻最前时，点悬浮窗标题栏的图钉按钮即可临时置顶（设置里也能改）
-- 拖动标题栏移动位置，位置会被记住；可折叠成一行、可调背景透明度
-- 点任意一条直接跳到主窗口的编辑框
+## 功能亮点
 
-**订阅外部日历**
+| | 用起来是什么样 |
+| :--- | :--- |
+| **📅 三种视图** | 月视图看全局，周视图排时间，日视图专注当天；重叠事件自动并排显示。 |
+| **⌨️ 一句话添加** | 按下 `Ctrl + K`，输入「明天下午3点 和设计对需求 1小时」，预览后回车保存。 |
+| **🪟 桌面悬浮窗** | 今天的安排贴在桌面上，可拖动、折叠、调透明度，也可以一键置顶。 |
+| **🦈 托盘常驻** | 关闭窗口后默认留在托盘；支持开机自启和全局快捷键，随时唤起。 |
+| **🔗 日历订阅** | 通过 ICS 链接订阅 Google、Outlook、Apple 等日历，支持重复事件与手动刷新。 |
+| **☁️ 可选云同步** | 本地日程可在多台设备间同步，服务端自行部署；不开启也能正常使用本地功能。 |
 
-- 支持粘贴 ICS 链接（`https://.../basic.ics` 或 `webcal://...`），把 Google 日历、Outlook、Apple 日历同步进来
-- 解析 VEVENT 全字段，支持 `RRULE` 重复规则展开（DAILY / WEEKLY / MONTHLY / YEARLY、BYDAY、INTERVAL、COUNT、UNTIL）与 `EXDATE` 排除
-- 正确处理折行、转义字符、`VALARM` 嵌套、`TZID` 时区
-- 订阅事件**只读**：不能直接编辑删除，但可以「忽略此次」（跳过重复会议里的某一场）或「复制为我的事件」
-- 启动后自动同步一次，之后每 6 小时刷新；也可以手动刷新。同步失败会保留上一次的数据，不会把日历变空
+## 界面预览
 
-**托盘常驻**
+### 从整周安排，到今天要做的事
 
-- 关闭窗口默认隐藏到托盘（可在设置里改），`Ctrl + Alt + N` 全局唤起新建
-- 托盘菜单可开关开机自启、打开数据文件夹
+<table>
+  <tr>
+    <td width="50%" align="center"><strong>周视图</strong><br /><sub>把会议、工作和休息排进时间轴</sub></td>
+    <td width="50%" align="center"><strong>日视图</strong><br /><sub>专注今天，查看当天事件详情</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/week.png" alt="周视图：一周七天的日程时间轴" width="100%" /></td>
+    <td><img src="screenshots/day.png" alt="日视图：当天时间轴和事件详情" width="100%" /></td>
+  </tr>
+</table>
 
-**云同步**
+### 记得快，也看得见
 
-- 本地创建的日程可以在多台设备间同步，后端用腾讯云开发 CloudBase（部署指南见 `docs/cloud-sync-setup.md`）
-- 只同步本地事件：订阅来的日历是派生数据，每台设备各自拉取，不参与同步
-- 删除是墓碑，同步到其他设备后不会「复活」
-- 冲突按修改时间取新（同一秒内两台设备同时改同一条才会撞车，实际几乎不会发生）
-- 访问令牌用系统加密存储（Windows DPAPI），不会写进数据文件
-- 同步时机：启动后 4 秒、本地改动后 2.5 秒、每 5 分钟轮询，也可手动触发
+<table>
+  <tr>
+    <td width="68%" align="center"><strong>自然语言快速添加</strong><br /><sub>一句话输入，保存前确认解析结果</sub></td>
+    <td width="32%" align="center"><strong>桌面悬浮窗</strong><br /><sub>今天的计划，抬眼就能看到</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/quickadd.png" alt="快速添加：输入日期、时间、事件标题和时长" width="100%" /></td>
+    <td align="center"><img src="screenshots/widget.png" alt="桌面悬浮窗：今天的事件列表" width="240" /></td>
+  </tr>
+</table>
 
-## 快速开始
+<details>
+<summary><strong>展开查看：日历订阅与云同步设置</strong></summary>
 
-```bash
-npm ci             # 按锁文件安装依赖
-npm run dev        # 开发模式（热更新）
-npm run build      # 构建
-npm start          # 用构建产物启动
-npm run dist       # 打包成 Windows 安装包 → release-v8/
+<br />
+
+| 添加日历订阅 | 管理订阅源 |
+| :---: | :---: |
+| ![通过 ICS 链接添加日历](screenshots/subscription.png) | ![日历订阅源管理](screenshots/subscription-settings.png) |
+
+| 查看订阅事件 | 配置云同步 |
+| :---: | :---: |
+| ![订阅事件的只读详情](screenshots/subscription-readonly.png) | ![云同步设置，示例使用本机测试服务](screenshots/sync-settings.png) |
+
+</details>
+
+## 开始使用
+
+### 安装 Windows 版本
+
+前往 [Releases](https://github.com/ChadBi/shark-calendar/releases) 查看安装包，下载 `鲨鱼日程 Setup x.x.x.exe` 并按提示安装，可自行选择安装目录。
+
+> [!NOTE]
+> 如果 Releases 尚无安装包，可以按下方[开发指南](#开发指南)从源码运行或自行打包。当前打包目标为 **Windows x64**。
+
+### 试着记下第一条安排
+
+打开应用，按 `Ctrl + K`，输入：
+
+```text
+明天下午3点 和设计对需求 1小时
 ```
 
-`npm run dist` 会生成 `release-v8/鲨鱼日程 Setup x.x.x.exe`（NSIS 安装包，可自选安装目录）。输出目录由 `package.json` 的 `build.directories.output` 配置。
+确认时间与标题，回车保存。也可以使用这些表达：
 
-## 更换应用图标
+| 想表达的内容 | 支持的写法 |
+| :--- | :--- |
+| 日期 | `今天`、`明天`、`后天`、`周五`、`下周一`、`10/20` |
+| 时间 | `下午3点`、`14:30`、`晚上八点半` |
+| 时长 | `1小时`、`2小时`、`30分钟` |
 
-图标就是普通图片，不需要设计软件。把新图（PNG / JPG，方形，建议 ≥ 256x256）准备好，然后：
+需要更多字段时，点击「新建」打开完整表单。
+
+### 把今天的计划放到桌面
+
+点击侧边栏底部的「桌面组件」，或按 `Ctrl + Alt + D` 显示悬浮窗。拖动标题栏调整位置，点击事件可回到主窗口查看。
+
+悬浮窗默认不置顶；需要常驻最前时，点击图钉按钮。位置、透明度和置顶设置会保存在本机。
+
+### 接入其他日历与设备
+
+- **订阅日历**：在设置中添加 `https://...` 或 `webcal://...` 格式的 ICS 链接。启动时自动刷新，之后每 6 小时刷新一次，也可手动刷新；失败时保留上次的数据。
+- **多设备同步**：按[云同步部署指南](docs/cloud-sync-setup.md)部署服务，然后在各设备填写相同的服务地址与令牌。仅同步本地创建的事件，订阅源和窗口设置由各设备分别维护。
+
+订阅事件为只读，可「忽略此次」或「复制为我的事件」；修改原始内容需回到来源日历操作。
+
+<details>
+<summary><strong>展开查看：常用快捷键</strong></summary>
+
+| 快捷键 | 作用 |
+| :--- | :--- |
+| `Ctrl + K` | 打开自然语言快速添加 |
+| `N` | 新建事件 |
+| `T` | 回到今天 |
+| `1` / `2` / `3` | 切换月 / 周 / 日视图 |
+| `←` / `→` | 上一个 / 下一个时间区间 |
+| `Ctrl + Enter` | 在事件编辑框中保存 |
+| `Esc` | 关闭编辑框或设置面板 |
+| `Ctrl + Alt + N` | 全局唤起新建事件 |
+| `Ctrl + Alt + D` | 全局显示 / 隐藏桌面悬浮窗 |
+
+单字母和方向键快捷键用于主界面浏览；输入文字时不会触发。
+
+</details>
+
+## 数据与隐私
+
+日程默认保存在本机，**云同步默认关闭**。启用后，本地创建的日程会上传到你配置的服务器；ICS 订阅会向你配置的日历地址请求数据。
+
+```text
+%APPDATA%\daily-list\
+├── daily-list.json    # 日程、订阅源和应用设置
+└── sync-token.bin     # 单独存放的同步令牌
+```
+
+- **本地存储**：采用「临时文件 + rename」写入；检测到损坏的数据文件时，会先备份再重置。
+- **同步令牌**：系统支持加密时使用 Electron `safeStorage`（Windows DPAPI）；不支持加密时会降级为明文存储。
+- **同步冲突**：同一事件按修改时间取较新版本；删除操作同步到其他设备，避免旧记录重新出现。
+
+备份日程时可先退出应用，再复制 `daily-list.json`。其中可能包含私人日程和订阅链接，请妥善保管；`sync-token.bin` 也不应公开。更换设备后，请重新配置同步令牌。
+
+## 开发指南
+
+基于 **Electron 33 · React 18 · TypeScript 5.7 · electron-vite**，使用 Zustand 管理界面状态，date-fns 处理日期，rrule 展开订阅中的重复事件。
+
+准备 Windows 开发环境、Git、Node.js 22 或更高版本及 npm，然后运行：
 
 ```bash
-node scripts/update-icon.mjs <你的图片路径>
+git clone https://github.com/ChadBi/shark-calendar.git
+cd shark-calendar
+npm ci
+npm run dev
+```
+
+### 构建与打包
+
+| 命令 | 作用 |
+| :--- | :--- |
+| `npm run dev` | 启动开发模式，支持热更新 |
+| `npm run typecheck` | 运行 TypeScript 类型检查 |
+| `npm run build` | 构建到 `out/` |
+| `npm start` | 启动已构建的应用 |
+| `npm run dist:dir` | 生成可直接运行的 Windows 应用目录 |
+| `npm run dist` | 生成 Windows NSIS 安装包 |
+
+当前打包输出为 `release-v8/`，由 `package.json` 中的 `build.directories.output` 配置。安装包通过 GitHub Releases 单独发布，依赖、构建产物、测试数据和本地凭据不纳入源码仓库。
+
+<details>
+<summary><strong>项目结构</strong></summary>
+
+```text
+src/
+├── main/                    # Electron 主进程
+│   ├── index.ts             # 窗口、托盘、IPC 与全局快捷键
+│   ├── store.ts             # 本地 JSON 存储与数据迁移
+│   ├── ics.ts               # ICS 解析与重复事件展开
+│   ├── sync.ts              # 日历订阅刷新
+│   ├── cloud-sync.ts        # 多设备同步
+│   └── credentials.ts       # 同步令牌存储
+├── preload/                 # contextBridge API
+├── shared/                  # 共用类型与默认配置
+└── renderer/                # React 主界面与桌面悬浮窗
+    └── src/
+        ├── components/      # 日历视图、事件编辑与设置
+        ├── lib/             # 日期工具与自然语言解析
+        └── styles/          # 主窗口与悬浮窗样式
+cloudbase/functions/sync/    # CloudBase 同步云函数模板
+docs/                       # 部署文档
+resources/                  # 主图标与托盘图标
+screenshots/                # 界面演示截图
+scripts/                    # 图标工具、测试与验证脚本
+```
+
+内部标识 `package.json` 的 `name` 保持为 `daily-list`，以沿用现有用户数据目录；显示名称由 `build.productName` 配置。
+
+</details>
+
+<details>
+<summary><strong>测试与联调</strong></summary>
+
+先运行 `npm run build`，再按需使用以下脚本：
+
+```bash
+npm run typecheck
+npm run smoke
+node scripts/probe.mjs "document.querySelectorAll('.month-cell').length"
+node scripts/test-subscribe.mjs
+node scripts/test-migrate.mjs
+node scripts/test-edge.mjs
+node scripts/test-sync.mjs
+```
+
+冒烟测试启动真实 Electron 应用，截图与隔离测试数据写入 `smoke/`；月视图格数检查的预期结果为 `42`。
+
+打包版检查需先运行 `npm run dist:dir`：
+
+```bash
+node scripts/qa-packaged.mjs
+node scripts/verify-packed.mjs https://your-sync-server.example
+```
+
+同步服务地址必须自行传入，不带末尾 `/sync`。
+
+</details>
+
+<details>
+<summary><strong>更换应用图标</strong></summary>
+
+准备方形图片（PNG / JPG，建议至少 256 × 256），运行：
+
+```bash
+node scripts/update-icon.mjs path/to/your-icon.png
 npm run dist
 ```
 
-转换图片和生成托盘图标需要安装 Python 与 Pillow（`python -m pip install Pillow`）。脚本会从 PATH 查找解释器，也可以通过 `PYTHON` 环境变量指定 Python 可执行文件路径。
-
-脚本会自动完成格式转换（electron-builder 只认 PNG）、生成 1024×1024 主图标和 32×32 托盘小图标，之后重新打包就生效。
-
-相关文件：
-- `resources/icon.png` —— 主图标
-- `resources/tray.png` —— 托盘小图标
-- `resources/icon-source.*` —— 你放进去的原始图片（留档，方便回滚）
-- `scripts/gen-icon.mjs` —— 程序化生成图标的备用方案
-
-## 快捷键
-
-| 快捷键 | 作用 |
-| --- | --- |
-| `Ctrl + K` | 快速添加（自然语言） |
-| `N` | 新建事件 |
-| `T` | 回到今天 |
-| `1` / `2` / `3` | 切换 月 / 周 / 日 视图 |
-| `←` / `→` | 上一页 / 下一页 |
-| `Ctrl + Enter` | 在编辑框里保存 |
-| `Esc` | 关闭弹窗 |
-| `Ctrl + Alt + N` | 全局：唤起新建（应用在托盘也生效） |
-| `Ctrl + Alt + D` | 全局：显示 / 隐藏桌面悬浮窗 |
-
-## 数据
-
-日程数据保存在本机：
-
-```
-%APPDATA%\daily-list\daily-list.json
-```
-
-写入采用「临时文件 + rename」的原子写，程序崩溃不会产生半截文件。如果文件被外部破坏，启动时会自动备份为 `daily-list.json.corrupt-<时间戳>.bak` 并重置，不会白屏。
-
-数据结构按**多设备同步**预留了字段：每条事件带 `id` / `rev` / `updatedAt` / `deleted`（软删除墓碑），顶层带 `schemaVersion`。
-
-云同步默认关闭；启用后，本地创建的日程会上传到你配置的同步服务器。订阅日历会从你配置的 ICS 地址下载，订阅事件不参与云同步。部署与配置方法见[云同步部署指南](docs/cloud-sync-setup.md)。
-
-访问令牌单独保存在同一数据目录下的 `sync-token.bin`，Windows 支持系统加密时使用 DPAPI；不要公开这个文件或含私人日程、订阅链接的数据文件。
-
-## 项目结构
-
-```
-src/
-├── main/              # 主进程
-│   ├── index.ts       # 窗口、托盘、悬浮窗、IPC、全局快捷键
-│   └── store.ts       # JSON 存储（原子写 + 损坏自愈）
-├── preload/           # contextBridge 暴露的 API
-├── shared/            # 主进程与渲染进程共用的类型、默认值、配色
-└── renderer/
-    ├── index.html     # 主窗口
-    ├── widget.html    # 悬浮窗（独立渲染进程）
-    └── src/
-        ├── lib/date.ts      # 日期工具 + 重叠事件分栏算法 layoutDay()
-        ├── lib/parse.ts     # 自然语言快速添加解析
-        └── components/      # MonthView / TimeGrid / EventEditor / ...
-scripts/
-├── gen-icon.mjs       # 纯 Node 生成应用图标（无第三方依赖）
-├── update-icon.mjs    # 一键更换应用图标（自动处理格式与尺寸）
-├── smoke.mjs          # 冒烟测试：启动应用 + CDP 截图
-└── probe.mjs          # 在运行中的渲染进程里执行 JS 做断言
-```
-
-## 测试
+图片转换与托盘缩略图生成需要 Python 和 Pillow：
 
 ```bash
-npm run typecheck    # 类型检查
-node scripts/smoke.mjs   # 启动真实应用，截图到 smoke/
-node scripts/probe.mjs "document.querySelectorAll('.month-cell').length"   # 应为 42
+python -m pip install Pillow
 ```
 
-打包后的启动检查使用 `node scripts/qa-packaged.mjs`，先运行 `npm run dist:dir`。同步服务联调使用 `node scripts/verify-packed.mjs <同步服务地址>`，地址不带末尾 `/sync`，必须自行传入。
+脚本从 PATH 查找解释器，也支持通过 `PYTHON` 环境变量指定 Python 可执行文件。原图副本保存在 `resources/icon-source.*`，主图标为 `resources/icon.png`，托盘图标为 `resources/tray.png`。
 
-## 源码与发布
+</details>
 
-仓库保留源码、锁文件、图标和演示截图。依赖、构建与打包目录、测试运行数据、AI 工作记录、开发交付报告和本地凭据已加入 `.gitignore`。Windows 安装包通过 GitHub Releases 单独发布。
+## 当前边界
 
-应用内部标识 `package.json` 的 `name` 保持为 `daily-list`，以沿用现有用户数据目录；显示名称由 `build.productName` 配置。
+| 能力 | 当前状态 |
+| :--- | :--- |
+| 本地重复事件 | 暂不支持；订阅日历中的重复事件可以展开 |
+| 系统通知提醒 | 暂不支持 |
+| 拖拽调整事件时间 | 暂不支持 |
+| 订阅事件编辑 | 只读，可忽略单次或复制为本地事件 |
+| 订阅展开范围 | 过去 60 天至未来 365 天，单源上限 3000 条实例 |
+| 云同步 | 客户端与服务端模板已提供，需要自行部署服务 |
+| macOS / Linux | 尚未提供打包配置 |
 
-项目采用 [MIT 许可证](LICENSE)。
+## 反馈与参与
 
-## 已知限制
+欢迎通过 [Issues](https://github.com/ChadBi/shark-calendar/issues) 反馈问题或提出建议，也欢迎提交 Pull Request。报告问题时，请附上应用版本、复现步骤和必要截图，并隐去私人日程、订阅链接与访问令牌。
 
-- 暂不支持重复日程（**本地创建**的；订阅来的重复日程会正常展开）
-- 暂不支持系统通知提醒
-- 暂不支持拖拽调整事件时间
-- 订阅只读：不能在自己软件里改外部日历的事件，改动请回原日历操作
-- 订阅展开范围限定在「过去 60 天 ~ 未来 365 天」，单源上限 3000 条实例
-- 云同步已就绪，但同步用的服务端需要自行部署（CloudBase 云函数模板已放在 `cloudbase/`，见部署指南）；不想用云同步不影响任何本地功能
-- 仅针对 Windows 打包配置；Electron 本身跨平台，macOS / Linux 需自行补打包配置
+项目采用 [MIT 许可证](LICENSE)；版本变更见 [CHANGELOG](CHANGELOG.md)。
+
+<div align="center">
+
+<br />
+
+<img src="resources/tray.png" alt="" width="24" /><br />
+<sub>鲨鱼日程 · 让今天的安排，各就各位。</sub>
+
+</div>
