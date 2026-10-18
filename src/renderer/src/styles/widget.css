@@ -1,0 +1,229 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  color: #1b1f27;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wg {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, var(--wg-alpha, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 14px 40px rgba(16, 24, 40, 0.16),
+    0 2px 8px rgba(16, 24, 40, 0.08);
+  overflow: hidden;
+}
+
+.wg-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 10px 9px 14px;
+  /* 整条头部是拖动区 */
+  -webkit-app-region: drag;
+  flex: none;
+}
+
+.wg-date {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wg-day {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wg-count {
+  font-size: 10.5px;
+  color: #6b7484;
+}
+
+.wg-actions {
+  display: flex;
+  gap: 1px;
+  -webkit-app-region: no-drag;
+  opacity: 0.55;
+  transition: opacity 0.14s;
+}
+
+.wg:hover .wg-actions {
+  opacity: 1;
+}
+
+.wg-btn {
+  width: 21px;
+  height: 21px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  color: #5b6472;
+  transition: background 0.12s, color 0.12s;
+}
+
+.wg-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #1b1f27;
+}
+
+.wg-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 8px 8px;
+  min-height: 0;
+}
+
+.wg-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+}
+
+.wg-item:hover {
+  background: rgba(0, 0, 0, 0.045);
+}
+
+.wg-item.past {
+  opacity: 0.38;
+}
+
+.wg-item.live {
+  background: rgba(59, 111, 245, 0.08);
+}
+
+.wg-bar {
+  width: 3px;
+  height: 15px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.wg-time {
+  font-size: 10.5px;
+  color: #6b7484;
+  font-variant-numeric: tabular-nums;
+  width: 34px;
+  flex: none;
+}
+
+.wg-title {
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.wg-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.wg-empty {
+  text-align: center;
+  color: #8b93a1;
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 26px 12px;
+}
+
+.wg-empty span {
+  font-size: 10.5px;
+  color: #a8b0bd;
+}
+
+.wg-foot {
+  flex: none;
+  height: 33px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  padding: 0 10px 0 12px;
+  gap: 8px;
+}
+
+.wg-hint {
+  font-size: 9.5px;
+  color: #a2aab7;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wg-open {
+  font-size: 11.5px;
+  font-weight: 550;
+  color: #3b6ff5;
+  padding: 3px 7px;
+  border-radius: 5px;
+  flex: none;
+}
+
+.wg-open:hover {
+  background: rgba(59, 111, 245, 0.1);
+}
