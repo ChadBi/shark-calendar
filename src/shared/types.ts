@@ -29,6 +29,43 @@ export interface CalendarEvent {
   serverSeq?: number
   /** 本地有未推送的修改 */
   dirty?: boolean
+  /**
+   * 本地重复规则（RFC 5545 的 RRULE 值，不含 "RRULE:" 前缀）。
+   * 例：`FREQ=WEEKLY;BYDAY=MO`。渲染时展开成虚拟实例，不落盘。
+   */
+  rrule?: string
+  /** 重复规则截止日（本地时间当天 23:59:59），与 rrule 配合使用 */
+  rruleUntil?: string
+  /**
+   * 虚拟实例指向的主事件 id。
+   * 带这个字段的事件是渲染时展开出来的，不能单独改，改主事件。
+   */
+  recurringMasterId?: string
+}
+
+/**
+ * 无日期待办：只记「要做」，不占日历格子。
+ * 可选填截止日；填了就作为全天事件出现在当天日历里。
+ */
+export interface Todo {
+  id: string
+  title: string
+  done: boolean
+  /** 完成时间 ISO，未完成时为空 */
+  doneAt?: string
+  createdAt: string
+  updatedAt: string
+  rev: number
+  deleted?: boolean
+  dirty?: boolean
+  /** 截止日（yyyy-MM-dd），为空表示「有空再做」 */
+  dueAt?: string
+  /** 置顶 */
+  pinned?: boolean
+  /** 手动排序权重，小的在前 */
+  order: number
+  notes?: string
+  serverSeq?: number
 }
 
 /** 一个 ICS 订阅源 */
@@ -65,10 +102,18 @@ export interface Settings {
   defaultView: ViewMode
   widgetOpacity: number
   widgetAlwaysOnTop: boolean
+  /** 压到桌面层（z-order 最底）：永不遮挡其他窗口，但会被任何窗口遮住 */
+  widgetDesktopLayer: boolean
   widgetBounds: WidgetBounds | null
   showWidgetOnStart: boolean
   /** 24 小时制 */
   hour24: boolean
+
+  /* ---------------- 提醒 ---------------- */
+  /** 事件开始前弹系统通知 */
+  reminderEnabled: boolean
+  /** 提前多少分钟提醒 */
+  reminderLeadMinutes: number
 
   /* ---------------- 云同步 ---------------- */
   syncEnabled: boolean
@@ -87,7 +132,14 @@ export interface AppData {
   deviceId: string
   events: CalendarEvent[]
   sources: CalendarSource[]
+  /** 无日期待办 */
+  todos: Todo[]
   settings: Settings
+  /**
+   * 已提醒过的实例 key（`eventId@startISO`），防止重启后重复弹窗。
+   * 不发给渲染进程，也不参与云同步。
+   */
+  reminderLog?: string[]
   /** 本次启动发生迁移时带旧版本号，渲染进程据此给一次性提示 */
   migratedFrom?: number | null
 }
@@ -170,6 +222,15 @@ export interface AppApi {
   syncNow(): Promise<SyncOutcome>
   getSyncStatus(): Promise<SyncStatus>
   setSyncToken(token: string): Promise<void>
+
+  /* 待办 */
+  addTodo(input: { title: string; dueAt?: string; notes?: string }): Promise<Todo>
+  updateTodo(id: string, patch: Partial<Pick<Todo, 'title' | 'done' | 'dueAt' | 'pinned' | 'order' | 'notes'>>): Promise<Todo | null>
+  deleteTodo(id: string): Promise<void>
+  reorderTodos(ids: string[]): Promise<void>
+
+  /* 提醒 */
+  testNotification(): Promise<boolean>
 
   onDataChanged(cb: (data: AppData) => void): () => void
   onQuickAdd(cb: () => void): () => void

@@ -26,6 +26,13 @@ const api: AppApi = {
   getSyncStatus: () => ipcRenderer.invoke('sync:status'),
   setSyncToken: (token: string) => ipcRenderer.invoke('sync:setToken', token),
 
+  addTodo: (input) => ipcRenderer.invoke('todos:add', input),
+  updateTodo: (id, patch) => ipcRenderer.invoke('todos:update', id, patch),
+  deleteTodo: (id) => ipcRenderer.invoke('todos:delete', id),
+  reorderTodos: (ids) => ipcRenderer.invoke('todos:reorder', ids),
+
+  testNotification: () => ipcRenderer.invoke('reminders:test'),
+
   onDataChanged: (cb: (data: AppData) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, data: AppData): void => cb(data)
     ipcRenderer.on('data:changed', listener)

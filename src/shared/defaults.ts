@@ -10,9 +10,15 @@ export const DEFAULT_SETTINGS: Settings = {
   // 默认不置顶：悬浮窗和普通窗口同级，切到别的应用时会被自然遮挡，
   // 不会一直压在其他窗口上面碍事。需要常驻最前时可在设置里打开。
   widgetAlwaysOnTop: false,
+  // 贴桌面层是「不遮挡别人」的极端版本：任何窗口都会盖住它
+  widgetDesktopLayer: false,
   widgetBounds: null,
   showWidgetOnStart: false,
   hour24: true,
+
+  // 提醒默认开：日程软件不提醒等于靠人肉盯屏幕
+  reminderEnabled: true,
+  reminderLeadMinutes: 10,
 
   // 云同步默认关闭：没配置服务地址时开着只会不断报错
   syncEnabled: false,
@@ -25,8 +31,10 @@ export const DEFAULT_SETTINGS: Settings = {
  * 数据结构版本。
  * v2：悬浮窗默认改为不置顶，且对老数据做一次性迁移
  *     （已持久化的 true 不会被新的默认值覆盖，必须显式改写）
+ * v3：新增待办列表（todos）、事件重复规则（rrule）、系统提醒设置
+ *     老数据补空数组与默认值，不需要改已有字段
  */
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 export const EVENT_COLORS = [
   { key: 'blue', label: '蓝', dot: '#3b6ff5', bg: '#e8efff', fg: '#1e4bd8' },

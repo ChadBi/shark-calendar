@@ -11,13 +11,16 @@ import { colorOf } from '../../shared/defaults'
 import type { ViewMode } from '../../shared/types'
 import {
   durationLabel,
+  endOfDay,
   eventsOnDay,
   fmtDayLabel,
   fmtTime,
+  monthMatrix,
   startOfDay,
   viewTitle,
   weekDays
 } from './lib/date'
+import { expandRecurring } from './lib/recur'
 
 const VIEWS: Array<{ key: ViewMode; label: string }> = [
   { key: 'month', label: '月' },
@@ -28,6 +31,7 @@ const VIEWS: Array<{ key: ViewMode; label: string }> = [
 export default function App(): React.ReactElement {
   const ready = useApp((s) => s.ready)
   const events = useApp((s) => s.events)
+  const todos = useApp((s) => s.todos)
   const settings = useApp((s) => s.settings)
   const view = useApp((s) => s.view)
   const cursor = useApp((s) => s.cursor)
@@ -45,9 +49,14 @@ export default function App(): React.ReactElement {
   const openEdit = useApp((s) => s.openEdit)
   const closeEditor = useApp((s) => s.closeEditor)
   const saveEvent = useApp((s) => s.saveEvent)
+  const rescheduleEvent = useApp((s) => s.rescheduleEvent)
   const removeEvent = useApp((s) => s.removeEvent)
   const setSettingsOpen = useApp((s) => s.setSettingsOpen)
   const setQuickAddOpen = useApp((s) => s.setQuickAddOpen)
+  const addTodo = useApp((s) => s.addTodo)
+  const toggleTodo = useApp((s) => s.toggleTodo)
+  const deleteTodo = useApp((s) => s.deleteTodo)
+  const updateTodo = useApp((s) => s.updateTodo)
 
   useEffect(() => {
     void init()
@@ -106,9 +115,28 @@ export default function App(): React.ReactElement {
     setView('day')
   }
 
+  /** 当前视图的可见时间范围，用于展开重复事件 */
+  const viewEvents = useMemo(() => {
+    let from: Date
+    let to: Date
+    if (view === 'month') {
+      const days = monthMatrix(cursor, settings.weekStartsOn)
+      from = startOfDay(days[0])
+      to = endOfDay(days[41])
+    } else if (view === 'week') {
+      const days = weekDays(cursor, settings.weekStartsOn)
+      from = startOfDay(days[0])
+      to = endOfDay(days[6])
+    } else {
+      from = startOfDay(cursor)
+      to = endOfDay(cursor)
+    }
+    return expandRecurring(events, from, to)
+  }, [events, view, cursor, settings.weekStartsOn])
+
   const dayEvents = useMemo(
-    () => (view === 'day' ? eventsOnDay(events, cursor) : []),
-    [view, events, cursor]
+    () => (view === 'day' ? eventsOnDay(viewEvents, cursor) : []),
+    [view, viewEvents, cursor]
   )
 
   if (!ready) {
@@ -119,6 +147,7 @@ export default function App(): React.ReactElement {
     <div className="app-shell">
       <Sidebar
         events={events}
+        todos={todos}
         cursor={cursor}
         weekStartsOn={settings.weekStartsOn}
         hour24={settings.hour24}
@@ -127,6 +156,10 @@ export default function App(): React.ReactElement {
         onNew={() => openNew()}
         onOpenSettings={() => setSettingsOpen(true)}
         onToggleWidget={() => void window.api.toggleWidget()}
+        onAddTodo={(title) => void addTodo(title)}
+        onToggleTodo={(id, done) => void toggleTodo(id, done)}
+        onDeleteTodo={(id) => void deleteTodo(id)}
+        onSetTodoDue={(id, due) => void updateTodo(id, { dueAt: due })}
       />
 
       <main className="main">
@@ -174,7 +207,7 @@ export default function App(): React.ReactElement {
         <div className="view-area">
           {view === 'month' && (
             <MonthView
-              events={events}
+              events={viewEvents}
               cursor={cursor}
               weekStartsOn={settings.weekStartsOn}
               hour24={settings.hour24}
@@ -186,25 +219,27 @@ export default function App(): React.ReactElement {
 
           {view === 'week' && (
             <TimeGrid
-              events={events}
+              events={viewEvents}
               days={weekDays(cursor, settings.weekStartsOn)}
               hour24={settings.hour24}
               onNew={openNew}
               onEdit={openEdit}
               onOpenDay={openDay}
+              onReschedule={(ev, s, e) => void rescheduleEvent(ev, s, e)}
             />
           )}
 
           {view === 'day' && (
             <div className="day-layout">
               <TimeGrid
-                events={events}
+                events={viewEvents}
                 days={[startOfDay(cursor)]}
                 hour24={settings.hour24}
                 bare
                 onNew={openNew}
                 onEdit={openEdit}
                 onOpenDay={openDay}
+                onReschedule={(ev, s, e) => void rescheduleEvent(ev, s, e)}
               />
 
               <div className="day-panel">

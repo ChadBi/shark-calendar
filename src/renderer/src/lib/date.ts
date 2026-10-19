@@ -2,6 +2,7 @@ import {
   addDays,
   addMonths,
   differenceInMinutes,
+  endOfDay,
   endOfMonth,
   endOfWeek,
   format,
@@ -220,4 +221,4 @@ export function durationLabel(start: Date, end: Date): string {
   return m ? `${h} 小时 ${m} 分` : `${h} 小时`
 }
 
-export { format, isSameDay, isSameMonth, isToday, startOfDay, endOfWeek, endOfMonth }
+export { format, isSameDay, isSameMonth, isToday, startOfDay, endOfDay, endOfWeek, endOfMonth }

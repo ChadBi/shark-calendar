@@ -93,6 +93,22 @@ export function SettingsPanel(): React.ReactElement {
             />
           </Row>
 
+          <Row
+            label="贴到桌面层"
+            desc="窗口始终排在所有窗口之下：不会挡住任何应用，但任何窗口都会挡住它，需要「显示桌面」才看得到"
+          >
+            <Switch
+              on={settings.widgetDesktopLayer}
+              onClick={() =>
+                patch(
+                  settings.widgetDesktopLayer
+                    ? { widgetDesktopLayer: false }
+                    : { widgetDesktopLayer: true, widgetAlwaysOnTop: false }
+                )
+              }
+            />
+          </Row>
+
           <Row label="启动时显示" desc="应用启动后自动把悬浮窗贴到桌面">
             <Switch
               on={settings.showWidgetOnStart}
@@ -142,6 +158,38 @@ export function SettingsPanel(): React.ReactElement {
                 12 小时
               </button>
             </div>
+          </Row>
+
+          <div className="sidebar-title" style={{ padding: '10px 0 0' }}>
+            提醒
+          </div>
+
+          <Row label="事件开始前提醒" desc="通过 Windows 系统通知弹出；点通知可直接打开该事件">
+            <Switch
+              on={settings.reminderEnabled}
+              onClick={() => patch({ reminderEnabled: !settings.reminderEnabled })}
+            />
+          </Row>
+
+          <Row label="提前时间">
+            <div className="segmented">
+              {[5, 10, 15, 30].map((m) => (
+                <button
+                  key={m}
+                  className={settings.reminderLeadMinutes === m ? 'active' : ''}
+                  onClick={() => patch({ reminderLeadMinutes: m })}
+                  disabled={!settings.reminderEnabled}
+                >
+                  {m} 分
+                </button>
+              ))}
+            </div>
+          </Row>
+
+          <Row label="测试通知" desc="点一下确认系统通知能正常弹出">
+            <button className="btn" onClick={() => void window.api.testNotification()}>
+              发送测试通知
+            </button>
           </Row>
 
           <SubscriptionPanel />

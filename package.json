@@ -1,6 +1,6 @@
 {
   "name": "daily-list",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "鲨鱼日程 —— 月/周/日视图、托盘常驻、桌面悬浮窗",
   "main": "./out/main/index.js",
   "author": "daily-list",
@@ -9,7 +9,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
-    "dist": "electron-vite build && electron-builder --win",
+    "dist": "node scripts/dist.mjs",
     "dist:dir": "electron-vite build && electron-builder --win --dir",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.mjs",
@@ -36,7 +36,7 @@
     "appId": "com.sharkcalendar.app",
     "productName": "鲨鱼日程",
     "directories": {
-      "output": "release-v8",
+      "output": "release-v9",
       "buildResources": "resources"
     },
     "files": [

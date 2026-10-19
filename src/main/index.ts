@@ -16,7 +16,16 @@ import { syncAll, syncSource } from './sync'
 import { normalizeIcsUrl } from './ics'
 import { getStatus as getSyncStatus, syncOnce } from './cloud-sync'
 import { saveSyncToken } from './credentials'
-import type { CalendarEvent, CalendarSource, EventColor, Settings, WidgetBounds } from '../shared/types'
+import { startReminders, showTestNotification } from './reminders'
+import { restoreNormalLayer, sendToBottom } from './desktop-layer'
+import type {
+  CalendarEvent,
+  CalendarSource,
+  EventColor,
+  Settings,
+  Todo,
+  WidgetBounds
+} from '../shared/types'
 
 const isDev = !app.isPackaged
 
@@ -163,6 +172,18 @@ function showMain(): void {
   mainWindow.focus()
 }
 
+/** 打开主窗口并弹出指定事件的编辑框（通知点击、悬浮窗点击共用） */
+function openEventById(id: string): void {
+  showMain()
+  if (!mainWindow) return
+  const deliver = (): void => mainWindow?.webContents.send('app:open-event', id)
+  if (mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.once('did-finish-load', deliver)
+  } else {
+    setTimeout(deliver, 100)
+  }
+}
+
 /* -------------------------------------------------------------- 悬浮小窗 */
 
 function createWidgetWindow(): BrowserWindow {
@@ -197,7 +218,15 @@ function createWidgetWindow(): BrowserWindow {
   // 刻意不调用 setVisibleOnAllWorkspaces：那会让悬浮窗压在全屏应用之上，
   // 与「和桌面同级、不遮挡其他窗口」的预期相反。
 
-  win.once('ready-to-show', () => win.showInactive())
+  win.once('ready-to-show', () => {
+    win.showInactive()
+    if (store.settings.widgetDesktopLayer) sendToBottom(win, true)
+  })
+
+  // 点一下就浮到最前会破坏「贴桌面」的语义，聚焦时再压回去
+  win.on('focus', () => {
+    if (store.settings.widgetDesktopLayer) sendToBottom(win)
+  })
 
   const persistBounds = (): void => {
     if (widgetMoveTimer) clearTimeout(widgetMoveTimer)
@@ -223,6 +252,13 @@ function showWidget(): void {
   }
   const win = widgetWindow
   win.showInactive()
+
+  // 贴桌面层时不需要也不应该提到最前——提上去就挡住了别的窗口
+  if (store.settings.widgetDesktopLayer) {
+    sendToBottom(win, true)
+    return
+  }
+
   // 不置顶时窗口可能被别的应用压在下面，唤出要显式提到同层最前，
   // 否则用户从托盘点了「显示悬浮窗」却什么也看不到。
   // 首次创建时窗口还没 ready，showInactive 是异步的，得等真正显示后再提。
@@ -351,12 +387,21 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('settings:patch', (_e, patch: Partial<Settings>) => {
-    const next = store.patchSettings(patch)
+    // 置顶与贴桌面层是互斥的两种层级，同时为真会让行为不可预期
+    const nextPatch: Partial<Settings> = { ...patch }
+    if (nextPatch.widgetAlwaysOnTop === true) nextPatch.widgetDesktopLayer = false
+    if (nextPatch.widgetDesktopLayer === true) nextPatch.widgetAlwaysOnTop = false
+
+    const next = store.patchSettings(nextPatch)
     if (patch.launchAtLogin !== undefined) {
       app.setLoginItemSettings({ openAtLogin: !!patch.launchAtLogin })
     }
-    if (patch.widgetAlwaysOnTop !== undefined && widgetWindow && !widgetWindow.isDestroyed()) {
-      widgetWindow.setAlwaysOnTop(!!patch.widgetAlwaysOnTop, 'floating')
+    if (nextPatch.widgetAlwaysOnTop !== undefined && widgetWindow && !widgetWindow.isDestroyed()) {
+      widgetWindow.setAlwaysOnTop(!!nextPatch.widgetAlwaysOnTop, 'floating')
+    }
+    if (nextPatch.widgetDesktopLayer !== undefined && widgetWindow && !widgetWindow.isDestroyed()) {
+      if (patch.widgetDesktopLayer) sendToBottom(widgetWindow, true)
+      else restoreNormalLayer(widgetWindow)
     }
     broadcast()
     return next
@@ -375,8 +420,12 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('widget:pin', (_e, pinned: boolean) => {
-    store.patchSettings({ widgetAlwaysOnTop: !!pinned })
+    // 置顶与贴桌面层互斥：置顶时先解除贴底
+    store.patchSettings(
+      pinned ? { widgetAlwaysOnTop: true, widgetDesktopLayer: false } : { widgetAlwaysOnTop: false }
+    )
     widgetWindow?.setAlwaysOnTop(!!pinned, 'floating')
+    if (pinned && widgetWindow && !widgetWindow.isDestroyed()) restoreNormalLayer(widgetWindow)
     broadcast()
   })
 
@@ -459,17 +508,39 @@ function registerIpc(): void {
     broadcast()
   })
 
-  // 从悬浮窗点某条事件 → 打开主窗口并弹出该事件的编辑框
-  ipcMain.handle('app:openEvent', (_e, id: string) => {
-    showMain()
-    if (!mainWindow) return
-    const deliver = (): void => mainWindow?.webContents.send('app:open-event', id)
-    if (mainWindow.webContents.isLoading()) {
-      mainWindow.webContents.once('did-finish-load', deliver)
-    } else {
-      setTimeout(deliver, 100)
-    }
+  /* ------------------------------------------------------------ 待办 */
+
+  ipcMain.handle('todos:add', (_e, input: { title: string; dueAt?: string; notes?: string }) => {
+    const todo = store.addTodo(input)
+    broadcast()
+    return todo
   })
+
+  ipcMain.handle(
+    'todos:update',
+    (_e, id: string, patch: Partial<Pick<Todo, 'title' | 'done' | 'dueAt' | 'pinned' | 'order' | 'notes'>>) => {
+      const todo = store.updateTodo(id, patch)
+      broadcast()
+      return todo
+    }
+  )
+
+  ipcMain.handle('todos:delete', (_e, id: string) => {
+    store.deleteTodo(id)
+    broadcast()
+  })
+
+  ipcMain.handle('todos:reorder', (_e, ids: string[]) => {
+    store.reorderTodos(ids)
+    broadcast()
+  })
+
+  /* ------------------------------------------------------------ 提醒 */
+
+  ipcMain.handle('reminders:test', () => showTestNotification())
+
+  // 从悬浮窗 / 通知点某条事件 → 打开主窗口并弹出该事件的编辑框
+  ipcMain.handle('app:openEvent', (_e, id: string) => openEventById(id))
   ipcMain.handle('app:quit', () => quitApp())
   ipcMain.handle('app:dataFolder', () => shell.openPath(store.dataDir))
 }
@@ -514,6 +585,22 @@ if (!gotLock) {
 
     if (store.settings.launchAtLogin) app.setLoginItemSettings({ openAtLogin: true })
     if (store.settings.showWidgetOnStart) showWidget()
+
+    // 系统通知提醒：30 秒轮询一次，已提醒的实例落盘去重
+    startReminders(store, { onOpenEvent: (id) => openEventById(id) })
+
+    // 贴桌面层：某些操作（切换虚拟桌面、显示桌面）会把窗口重新提上来，
+    // 每 5 秒兜底压回最底层
+    setInterval(() => {
+      if (
+        store.settings.widgetDesktopLayer &&
+        widgetWindow &&
+        !widgetWindow.isDestroyed() &&
+        widgetWindow.isVisible()
+      ) {
+        sendToBottom(widgetWindow)
+      }
+    }, 5000).unref()
 
     // 全局快捷键：注册失败不阻断启动（可能被其他软件占用）
     const shortcuts: Array<[string, () => void]> = [

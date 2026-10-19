@@ -261,6 +261,116 @@ textarea {
   line-height: 1.6;
 }
 
+/* 待办 */
+
+.todo-input {
+  width: 100%;
+  height: 28px;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+}
+
+.todo-item:hover {
+  background: var(--surface-3);
+}
+
+.todo-check {
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border-radius: 4px;
+  border: 1.4px solid var(--line-strong);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex: none;
+  padding: 0;
+  color: #fff;
+}
+
+.todo-check:hover {
+  border-color: var(--brand);
+}
+
+.todo-check.on {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.todo-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.todo-title {
+  font-size: 12.5px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.todo-item.done .todo-title {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.todo-due {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-due-input {
+  font-size: 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 1px 3px;
+  width: 100%;
+  margin-top: 2px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.todo-pin {
+  font-size: 9.5px;
+  color: var(--brand);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+
+.todo-act {
+  opacity: 0;
+  border: none;
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  flex: none;
+  line-height: 0;
+}
+
+.todo-item:hover .todo-act {
+  opacity: 1;
+}
+
+.todo-act:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
 .sidebar-foot {
   border-top: 1px solid var(--line);
   padding: 8px;
@@ -772,6 +882,87 @@ textarea {
 
 .slot.compact .slot-time {
   display: none;
+}
+
+/* 拖拽调整时间 */
+
+.slot.draggable {
+  cursor: grab;
+  /* 让指针事件不被滚动手势抢走 */
+  touch-action: none;
+}
+
+.slot.draggable:active {
+  cursor: grabbing;
+}
+
+.slot.dragging {
+  opacity: 0.92;
+  z-index: 6;
+  box-shadow: var(--shadow-lg);
+  outline: 1.5px solid rgba(59, 111, 245, 0.55);
+  transition: none;
+  pointer-events: none;
+}
+
+.slot.ghost {
+  opacity: 0.55;
+  border-left-style: dashed;
+}
+
+/* 上下边缘的拖拽把手：hover 时给一点视觉提示 */
+.slot-grip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  opacity: 0;
+}
+
+.slot-grip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.slot-grip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  top: 0;
+}
+
+.slot.draggable:hover .slot-grip {
+  opacity: 0.6;
+}
+
+.slot.draggable:hover .slot-grip::before {
+  background: transparent;
+}
+
+/* 上方热区 */
+.slot-grip {
+  top: 0;
+  cursor: ns-resize;
+}
+
+/* 下方热区用第二个伪元素做不到，交给容器 bottom 定位 */
+.slot.draggable:hover::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 7px;
+  cursor: ns-resize;
 }
 
 .allday-row {

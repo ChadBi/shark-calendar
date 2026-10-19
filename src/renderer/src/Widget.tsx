@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { AppData } from '../../shared/types'
 import { DEFAULT_SETTINGS, colorOf } from '../../shared/defaults'
-import { eventsOnDay, fmtDayLabel, fmtTime } from './lib/date'
+import { eventsOnDay, endOfDay, fmtDayLabel, fmtTime, startOfDay } from './lib/date'
+import { expandRecurring } from './lib/recur'
 import { Icon } from './components/Icon'
 import './styles/widget.css'
 
@@ -24,8 +25,13 @@ export default function Widget(): React.ReactElement {
 
   const settings = data?.settings ?? DEFAULT_SETTINGS
   const events = data?.events ?? []
+  const pendingTodos = (data?.todos ?? []).filter((t) => !t.done).length
 
-  const todays = useMemo(() => eventsOnDay(events, new Date()), [events])
+  const todays = useMemo(() => {
+    const today = new Date()
+    // 重复事件在主进程里是一条主记录，悬浮窗要自己展开今天这一场
+    return eventsOnDay(expandRecurring(events, startOfDay(today), endOfDay(today)), today)
+  }, [events])
 
   const now = Date.now()
   const ongoing = todays.filter(
@@ -53,6 +59,7 @@ export default function Widget(): React.ReactElement {
               : ongoing.length > 0
                 ? `今天 ${todays.length} 项 · 进行中 ${ongoing.length}`
                 : `今天 ${todays.length} 项`}
+            {pendingTodos > 0 && ` · 待办 ${pendingTodos}`}
           </span>
         </div>
 

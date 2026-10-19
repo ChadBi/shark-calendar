@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFileSync } from 'fs'
-import type { AppData, CalendarEvent, CalendarSource, Settings } from '../shared/types'
+import type { AppData, CalendarEvent, CalendarSource, Settings, Todo } from '../shared/types'
 import { DEFAULT_SETTINGS, SCHEMA_VERSION } from '../shared/defaults'
 
 export { DEFAULT_SETTINGS, SCHEMA_VERSION }
@@ -12,6 +12,8 @@ function emptyData(): AppData {
     deviceId: crypto.randomUUID(),
     events: [],
     sources: [],
+    todos: [],
+    reminderLog: [],
     settings: { ...DEFAULT_SETTINGS }
   }
 }
@@ -57,6 +59,12 @@ export class Store {
         this.migratedFrom = version
       }
 
+      if (version < 3) {
+        // v3 只新增字段（待办、重复规则、提醒设置），不改动已有数据。
+        // settings 已经在上面用默认值兜底，这里只需要保证 todos 是数组。
+        this.migratedFrom = this.migratedFrom ?? version
+      }
+
       return {
         // 数据来自更新版本时不要把版本号降下来，否则未来 v3 的数据
         // 被旧版程序打开会被误标成 v2，回滚时又触发一次迁移
@@ -64,6 +72,8 @@ export class Store {
         deviceId: parsed.deviceId ?? crypto.randomUUID(),
         events: Array.isArray(parsed.events) ? parsed.events : [],
         sources: Array.isArray(parsed.sources) ? parsed.sources : [],
+        todos: Array.isArray(parsed.todos) ? parsed.todos : [],
+        reminderLog: Array.isArray(parsed.reminderLog) ? parsed.reminderLog : [],
         settings
       }
     } catch (err) {
@@ -113,6 +123,10 @@ export class Store {
         allDay: input.allDay ?? existing.allDay,
         color: input.color ?? existing.color,
         notes: input.notes ?? existing.notes,
+        // 重复规则可能被「改成不重复」，必须用 in 判断而不是 ??，
+        // 否则传 undefined 会被当成"没传"而保留旧规则
+        rrule: 'rrule' in input ? input.rrule : existing.rrule,
+        rruleUntil: 'rruleUntil' in input ? input.rruleUntil : existing.rruleUntil,
         updatedAt: now,
         rev: existing.rev + 1,
         // 标记为待推送；订阅事件不参与云同步，永远不置 dirty
@@ -129,6 +143,8 @@ export class Store {
       allDay: input.allDay ?? false,
       color: input.color ?? 'blue',
       notes: input.notes,
+      rrule: input.rrule,
+      rruleUntil: input.rruleUntil,
       createdAt: now,
       updatedAt: now,
       rev: 1,
@@ -161,6 +177,94 @@ export class Store {
     }
     this.save()
     return added
+  }
+
+  /* ------------------------------------------------------------ 待办 */
+
+  addTodo(input: { title: string; dueAt?: string; notes?: string }): Todo {
+    const now = new Date().toISOString()
+    // 新建的排在最前：取当前最小 order 再减一
+    const minOrder = this.data.todos.reduce((m, t) => Math.min(m, t.order ?? 0), 0)
+    const todo: Todo = {
+      id: crypto.randomUUID(),
+      title: input.title.trim() || '未命名待办',
+      done: false,
+      createdAt: now,
+      updatedAt: now,
+      rev: 1,
+      deleted: false,
+      dirty: true,
+      dueAt: input.dueAt || undefined,
+      notes: input.notes?.trim() || undefined,
+      pinned: false,
+      order: minOrder - 1
+    }
+    this.data.todos.push(todo)
+    this.save()
+    return todo
+  }
+
+  updateTodo(
+    id: string,
+    patch: Partial<Pick<Todo, 'title' | 'done' | 'dueAt' | 'pinned' | 'order' | 'notes'>>
+  ): Todo | null {
+    const t = this.data.todos.find((x) => x.id === id)
+    if (!t) return null
+    const now = new Date().toISOString()
+
+    if (patch.title !== undefined) t.title = patch.title.trim() || t.title
+    if (patch.dueAt !== undefined) t.dueAt = patch.dueAt || undefined
+    if (patch.notes !== undefined) t.notes = patch.notes || undefined
+    if (patch.pinned !== undefined) t.pinned = patch.pinned
+    if (patch.order !== undefined) t.order = patch.order
+    if (patch.done !== undefined) {
+      t.done = patch.done
+      t.doneAt = patch.done ? now : undefined
+    }
+
+    t.updatedAt = now
+    t.rev += 1
+    t.dirty = true
+    this.save()
+    return t
+  }
+
+  deleteTodo(id: string): void {
+    const t = this.data.todos.find((x) => x.id === id)
+    if (!t) return
+    t.deleted = true
+    t.updatedAt = new Date().toISOString()
+    t.rev += 1
+    t.dirty = true
+    this.save()
+  }
+
+  /** 按给定顺序批量重排；未出现在列表里的保持原顺序 */
+  reorderTodos(ids: string[]): void {
+    const now = new Date().toISOString()
+    ids.forEach((id, i) => {
+      const t = this.data.todos.find((x) => x.id === id)
+      if (!t) return
+      t.order = i
+      t.updatedAt = now
+      t.rev += 1
+      t.dirty = true
+    })
+    this.save()
+  }
+
+  /* -------------------------------------------------------- 提醒去重 */
+
+  wasReminded(key: string): boolean {
+    return (this.data.reminderLog ?? []).includes(key)
+  }
+
+  markReminded(key: string): void {
+    const log = this.data.reminderLog ?? (this.data.reminderLog = [])
+    log.push(key)
+    // 只保留最近 500 条：一个一年前的 key 不可能再命中
+    if (log.length > 500) this.data.reminderLog = log.slice(-500)
+    this.save()
   }
 
   patchSettings(patch: Partial<Settings>): Settings {
@@ -220,13 +324,14 @@ export class Store {
     this.save()
   }
 
-  /** 渲染进程可见的数据：过滤掉软删除的墓碑 */
+  /** 渲染进程可见的数据：过滤掉软删除的墓碑；reminderLog 不对外暴露 */
   snapshot(): AppData {
     return {
       schemaVersion: this.data.schemaVersion,
       deviceId: this.data.deviceId,
       events: this.data.events.filter((e) => !e.deleted),
       sources: this.data.sources,
+      todos: this.data.todos.filter((t) => !t.deleted),
       settings: this.data.settings
     }
   }

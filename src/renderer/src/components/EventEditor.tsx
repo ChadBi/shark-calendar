@@ -16,6 +16,16 @@ interface Props {
 const toDateStr = (d: Date): string => format(d, 'yyyy-MM-dd')
 const toTimeStr = (d: Date): string => format(d, 'HH:mm')
 
+/** 常用的重复规则。刻意只做这几种，不做完整 RRULE 编辑器 */
+const REPEAT_OPTIONS: Array<{ label: string; rule: string }> = [
+  { label: '不重复', rule: '' },
+  { label: '每天', rule: 'FREQ=DAILY' },
+  { label: '每周', rule: 'FREQ=WEEKLY' },
+  { label: '工作日', rule: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR' },
+  { label: '每月', rule: 'FREQ=MONTHLY' },
+  { label: '每年', rule: 'FREQ=YEARLY' }
+]
+
 export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.ReactElement {
   const [title, setTitle] = useState(draft.title)
   const [dateStr, setDateStr] = useState(toDateStr(draft.start))
@@ -24,6 +34,8 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
   const [allDay, setAllDay] = useState(draft.allDay)
   const [color, setColor] = useState<EventColor>(draft.color)
   const [notes, setNotes] = useState(draft.notes ?? '')
+  const [repeat, setRepeat] = useState(draft.rrule ?? '')
+  const [repeatUntil, setRepeatUntil] = useState(draft.rruleUntil ?? '')
   const titleRef = useRef<HTMLInputElement>(null)
 
   const sources = useApp((s) => s.sources)
@@ -60,7 +72,11 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
       end,
       allDay,
       color,
-      notes: notes.trim() || undefined
+      notes: notes.trim() || undefined,
+      // 截止日按本地时间存，避免 toISOString 把日期推到前一天
+      rrule: repeat || undefined,
+      rruleUntil: repeat && repeatUntil ? `${repeatUntil}T23:59:59` : undefined,
+      recurringMasterId: draft.recurringMasterId
     })
   }
 
@@ -115,6 +131,13 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
             <div className="readonly-banner">
               <Icon name="link" size={13} />
               <span>来自订阅《{sourceName ?? '外部日历'}》，只读。要修改请到原日历里操作。</span>
+            </div>
+          )}
+
+          {draft.recurringMasterId && (
+            <div className="readonly-banner">
+              <Icon name="refresh" size={13} />
+              <span>这是重复事件中的一场。修改会应用到整个系列。</span>
             </div>
           )}
 
@@ -206,6 +229,42 @@ export function EventEditor({ draft, onSave, onDelete, onClose }: Props): React.
               ))}
             </div>
           </div>
+
+          {!readOnly && (
+            <>
+              <div className="field-row">
+                <span className="field-label">重复</span>
+                <select
+                  className="input"
+                  style={{ flex: 1 }}
+                  value={repeat}
+                  onChange={(e) => setRepeat(e.target.value)}
+                >
+                  {REPEAT_OPTIONS.map((o) => (
+                    <option key={o.label} value={o.rule}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {repeat && (
+                <div className="field-row">
+                  <span className="field-label">截止</span>
+                  <input
+                    type="date"
+                    className="input"
+                    style={{ flex: 1 }}
+                    value={repeatUntil}
+                    onChange={(e) => setRepeatUntil(e.target.value)}
+                  />
+                  <button className="btn ghost" onClick={() => setRepeatUntil('')}>
+                    一直重复
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
           <div>
             <textarea

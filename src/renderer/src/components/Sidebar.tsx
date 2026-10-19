@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import type { CalendarEvent } from '../../../shared/types'
+import type { CalendarEvent, Todo } from '../../../shared/types'
 import { colorOf } from '../../../shared/defaults'
 import {
   WEEKDAY_LABELS,
+  endOfDay,
   eventsOnDay,
   fmtTime,
   isSameDay,
@@ -11,6 +12,7 @@ import {
   monthMatrix,
   startOfDay
 } from '../lib/date'
+import { expandRecurring } from '../lib/recur'
 import { Icon } from './Icon'
 
 interface MiniProps {
@@ -29,13 +31,16 @@ function MiniMonth({ events, cursor, weekStartsOn, onSelect }: MiniProps): React
     [weekStartsOn]
   )
   const busy = useMemo(() => {
+    // 重复事件要先按这个月的范围展开，否则小圆点只会出现在首次发生的那天
+    const from = startOfDay(days[0])
+    const to = endOfDay(days[days.length - 1])
     const set = new Set<string>()
-    for (const e of events) {
+    for (const e of expandRecurring(events, from, to)) {
       const d = startOfDay(new Date(e.start)).toDateString()
       set.add(d)
     }
     return set
-  }, [events])
+  }, [events, days])
 
   const shift = (delta: number): void => {
     const d = new Date(anchor)
@@ -88,6 +93,7 @@ function MiniMonth({ events, cursor, weekStartsOn, onSelect }: MiniProps): React
 
 interface SidebarProps {
   events: CalendarEvent[]
+  todos: Todo[]
   cursor: Date
   weekStartsOn: 0 | 1
   hour24: boolean
@@ -96,10 +102,15 @@ interface SidebarProps {
   onNew: () => void
   onOpenSettings: () => void
   onToggleWidget: () => void
+  onAddTodo: (title: string) => void
+  onToggleTodo: (id: string, done: boolean) => void
+  onDeleteTodo: (id: string) => void
+  onSetTodoDue: (id: string, due: string | undefined) => void
 }
 
 export function Sidebar({
   events,
+  todos,
   cursor,
   weekStartsOn,
   hour24,
@@ -107,10 +118,38 @@ export function Sidebar({
   onEdit,
   onNew,
   onOpenSettings,
-  onToggleWidget
+  onToggleWidget,
+  onAddTodo,
+  onToggleTodo,
+  onDeleteTodo,
+  onSetTodoDue
 }: SidebarProps): React.ReactElement {
-  const today = new Date()
-  const todays = useMemo(() => eventsOnDay(events, today), [events, today])
+  const [todoInput, setTodoInput] = useState('')
+  const [dueEditing, setDueEditing] = useState<string | null>(null)
+
+  const todays = useMemo(() => {
+    const today = new Date()
+    return eventsOnDay(expandRecurring(events, startOfDay(today), endOfDay(today)), today)
+  }, [events])
+
+  // 未完成在前、置顶在前、手动顺序次之、最近创建的排后面
+  const sortedTodos = useMemo(() => {
+    return [...todos].sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1
+      if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1
+      if (a.order !== b.order) return a.order - b.order
+      return b.createdAt.localeCompare(a.createdAt)
+    })
+  }, [todos])
+
+  const pendingCount = useMemo(() => todos.filter((t) => !t.done).length, [todos])
+
+  const submitTodo = (): void => {
+    const text = todoInput.trim()
+    if (!text) return
+    onAddTodo(text)
+    setTodoInput('')
+  }
 
   return (
     <aside className="sidebar">
@@ -158,6 +197,78 @@ export function Sidebar({
               还有 {todays.length - 8} 项…
             </div>
           )}
+        </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-title">
+            <span>待办</span>
+            <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
+              {pendingCount} 项
+            </span>
+          </div>
+
+          <input
+            className="input todo-input"
+            placeholder="添加待办，回车保存"
+            value={todoInput}
+            onChange={(e) => setTodoInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                submitTodo()
+              }
+            }}
+          />
+
+          {sortedTodos.length === 0 && (
+            <div className="empty-hint">
+              没有待办
+              <br />
+              想到什么先记下来，不用挑时间
+            </div>
+          )}
+
+          {sortedTodos.map((t) => (
+            <div key={t.id} className={`todo-item${t.done ? ' done' : ''}`}>
+              <button
+                className={`todo-check${t.done ? ' on' : ''}`}
+                onClick={() => onToggleTodo(t.id, !t.done)}
+                title={t.done ? '标记为未完成' : '标记完成'}
+              >
+                {t.done && <Icon name="check" size={9} strokeWidth={3.2} />}
+              </button>
+
+              <div className="todo-body">
+                <div className="todo-title" title={t.title}>
+                  {t.pinned && <span className="todo-pin">置顶</span>}
+                  {t.title}
+                </div>
+                {dueEditing === t.id ? (
+                  <input
+                    type="date"
+                    className="todo-due-input"
+                    autoFocus
+                    value={t.dueAt ?? ''}
+                    onChange={(e) => onSetTodoDue(t.id, e.target.value || undefined)}
+                    onBlur={() => setDueEditing(null)}
+                  />
+                ) : (
+                  t.dueAt && <div className="todo-due">{t.dueAt.slice(5).replace('-', '/')} 截止</div>
+                )}
+              </div>
+
+              <button
+                className="todo-act"
+                onClick={() => setDueEditing(dueEditing === t.id ? null : t.id)}
+                title="设置截止日（会出现在当天日历里）"
+              >
+                <Icon name="calendar" size={11} />
+              </button>
+              <button className="todo-act" onClick={() => onDeleteTodo(t.id)} title="删除">
+                <Icon name="x" size={11} />
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 
