@@ -130,6 +130,7 @@
 - [x] **冒烟测试**：CDP 截图，覆盖月/周/日/悬浮窗/设置
 - [x] **文档**：`README.md`、`CHANGELOG.md`、`docs/cloud-sync-setup.md`
 - [x] **开源准备**：MIT 许可证、`.gitignore`（排除凭据、个人数据、release 产物）
+- [x] **GitHub 发布**：仓库 [ChadBi/shark-calendar](https://github.com/ChadBi/shark-calendar)，Release [`v0.3.0`](https://github.com/ChadBi/shark-calendar/releases/tag/v0.3.0) 已上线，附件 `Setup.0.3.0.exe`（82 MB，含 sha256 校验）
 
 ---
 
@@ -137,9 +138,11 @@
 
 - [x] ✅ **图标透明背景**（`P0`，2026-10-19 完成）
   `resources/icon.png` 与 `resources/tray.png` 均已替换为带 alpha 通道的 RGBA PNG，边缘透明正常。
-- [ ] 🚧 **GitHub 发布收尾**（`P0`）
-  远程仓库已关联 `github.com/ChadBi/shark-calendar`，代码已推送。
-  剩余三件事：推送最新提交 → 打 `v0.3.0` tag → 上传安装包到 Releases。
+- [x] ✅ **GitHub 发布**（`P0`，2026-10-18 完成）
+  Release `v0.3.0` 已发布，附件 `Setup.0.3.0.exe`（82 MB）。下载页：`/releases/latest`
+- [ ] 🚧 **推送路线图提交**（`P0`）
+  远程 `main` 停在 `f71e9d9`，本地还有 2 个文档提交（`227bbb1`、`417c702`）未推。
+  推上去后仓库里才会有 `ROADMAP.md`。
 - [ ] 🚧 **首次使用引导**（`P2`）
   新用户第一次打开是空日历，缺少「三步上手」提示（新建事件 / 订阅日历 / 开启同步）。
 
